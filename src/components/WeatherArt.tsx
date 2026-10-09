@@ -108,7 +108,8 @@ export function WeatherArt({
 
   return (
     <span className={`inline-flex items-center justify-center fs-icon-float ${tone} ${halo} ${className ?? ''}`}>
-      <Icon aria-hidden="true" focusable="false" />
+      {/* react-icons varsayılan 1em boyutundadır; kaplayıcıya uyması için 100% gerekir */}
+      <Icon aria-hidden="true" focusable="false" className="w-full h-full" />
     </span>
   )
 }
@@ -126,7 +127,7 @@ export function WeatherIcon({
   const Icon = pick(code, isDay)
   return (
     <span className={`inline-flex items-center justify-center ${className ?? ''}`}>
-      <Icon aria-hidden="true" focusable="false" />
+      <Icon aria-hidden="true" focusable="false" className="w-full h-full" />
     </span>
   )
 }

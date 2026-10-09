@@ -113,7 +113,7 @@ export function KioskLayout({
             (ok: şeridin tam kenarında, yarısı içeride yarısı dışarıda taşacak şekilde) */}
         <div className="pt-3 mt-2 border-t border-white/10 flex flex-col items-center gap-2">
           <div className="relative w-full flex justify-center">
-            <FamilyClover members={db.members} size={collapsed ? 44 : 54} />
+            <FamilyClover members={db.members} size={collapsed ? 50 : 62} />
             <button
               type="button"
               onClick={toggleNav}

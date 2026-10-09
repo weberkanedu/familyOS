@@ -125,7 +125,7 @@ export function WeatherWidget({
               </div>
             )}
           </div>
-          <WeatherArt code={now?.weatherCode ?? 2} isDay={now?.isDay ?? true} className="w-[88px] h-[70px] shrink-0 -mr-1" />
+          <WeatherArt code={now?.weatherCode ?? 2} isDay={now?.isDay ?? true} className="w-[104px] h-[86px] shrink-0 -mr-1" />
         </button>
 
         {/* 5 günlük haplar */}
@@ -353,7 +353,7 @@ function DayDetail({
             {fmtDayName(parseKey(day.date))}, {fmtShort(day.date)}
           </div>
 
-          <WeatherArt code={day.weatherCode} isDay={isDay} className="w-[220px] h-[140px] mx-auto my-2" />
+          <WeatherArt code={day.weatherCode} isDay={isDay} className="w-[280px] h-[190px] mx-auto my-3" />
 
           <div className={cx('text-5xl font-extrabold tabular-nums drop-shadow-sm', light ? 'text-white' : 'text-slate-900')}>
             {day.max}°
