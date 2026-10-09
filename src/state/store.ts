@@ -24,12 +24,40 @@ function load(): DB {
 function persist() {
   if (saveTimer) clearTimeout(saveTimer)
   saveTimer = setTimeout(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
-    } catch {
-      /* kota dolu */
-    }
+    saveTimer = null
+    writeNow()
   }, SAVE_DELAY)
+}
+
+/**
+ * Gecikmesiz anlık yazma.
+ *
+ * Tabletin şarjı bitince ya da sekme çökünce, debounce (250 ms) penceresi
+ * içindeki son değişiklik kaybolurdu. Sekme kapanırken / sayfa gizlenirken
+ * ve şarj bittikten sonra (bkz. boot hook) anında diske yazıyoruz.
+ */
+function writeNow() {
+  if (saveTimer) {
+    clearTimeout(saveTimer)
+    saveTimer = null
+  }
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+  } catch {
+    /* kota dolu */
+  }
+}
+
+/* Sekme kapanırken, arka plana alınınca ve şarj kesilince anında yaz. */
+if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+  const flush = () => {
+    if (saveTimer) writeNow()
+  }
+  window.addEventListener('pagehide', flush)
+  window.addEventListener('beforeunload', flush)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flush()
+  })
 }
 
 function notify() {
@@ -72,6 +100,11 @@ export function applyOp(op: Op): void {
 }
 
 /** Uzak snapshot (soğuk başlatma) — op geçmişinin özeti. */
+/** Test yardımcısı: bekleyen yazmayı hemen diske yazar. */
+export function writeNowForTest(): void {
+  writeNow()
+}
+
 export function hydrate(db: DB): void {
   state = normalizeDB(db)
   notify()
