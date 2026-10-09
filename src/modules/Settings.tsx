@@ -13,19 +13,16 @@ import type { AppMode, DB, Member, Role, SoundMode } from '../types'
 
 const COLORS = ['#f97362', '#4f6ef7', '#22c55e', '#f59e0b', '#a855f7', '#06b6d4', '#ec4899', '#84cc16']
 
-/** Üst bant kapak görseli için hazır yapay zekâ prompt'u (kullanıcı isteğiyle) */
-const ARTWORK_PROMPT = `Refined editorial travel-art composition based on the reference photo.
-The image is divided vertically in two: the top half is a realistic cinematic travel photograph, the bottom half transforms the exact same scene into a delicate hand-painted watercolor illustration.
+/** Üst bant kapak görseli için hazır yapay zekâ prompt'u */
+const ARTWORK_PROMPT = `A delicate, hand-painted watercolor illustration of the family from image_0.png, completely isolated on a flat, pure white background with absolutely no text, captions, or horizontal lines.
 
-TOP HALF — authentic candid travel photography, natural daylight, soft shadows, fine film grain, realistic textures, sophisticated European atmosphere, documentary-style composition, people walking naturally through the scene, beautiful architectural details, slightly muted elegant colors, high-end travel magazine photography.
+The image focuses entirely on the family of three: the mother, the father, and the toddler in denim overalls, preserving their exact happy poses, natural sits, and affectionate interactions from the reference photo.
 
-BOTTOM HALF — the very same scene as a minimalist handmade watercolor painting, preserving the photograph's recognizable composition, architecture, people, poses, perspective and main visual elements. Loose transparent watercolor washes, delicate ink details, visible paper texture, soft edges, imperfect brush strokes, fine pigment bleeding, airy negative space, simple pastel tones, artistic yet realistic.
+The artwork is rendered in a natural, artistic style using loose, transparent watercolor washes in a soft palette of denim blues, warm earth tones, and gentle skin shades. Fine, sketchy ink outlines define their features, hair, and clothing folds. Natural watercolor textures, soft edges, visible brush strokes, and delicate pigment bleeding give the figures a handmade character. The paint gently fades out and bleeds naturally into the surrounding white space at the outer edges of their bodies, particularly where they sit on the invisible ground.
 
-Surround the watercolor illustration with a generous warm ivory / off-white textured paper margin. Add a small elegant handwritten caption near the bottom (for example "summer days" or "a quiet afternoon"), underlined by a thin minimalist horizontal line.
+The figures are closely grouped together on the floor with absolutely no background elements, seating, shadows, borders, or paper textures outside of their painted forms, leaving the surrounding white space entirely empty and blank.
 
-Overall aesthetic: luxury travel journal, fine art watercolor postcard, contemporary editorial design, nostalgic European summer, quiet elegance, tactile handmade paper, sophisticated and calm.
-
-Vertical portrait orientation, clean composition, premium art direction, no clutter, no borders, natural proportions.`
+The overall image is a clean, vertical portrait with generous margins of pure white, capturing a warm, nostalgic, and artistic aesthetic, entirely focused on the family and ready to be placed seamlessly onto any background.`
 const EMOJIS = ['👩🏽', '👨🏽', '🧒🏻', '👦🏻', '👩', '👨', '👧', '👦', '🧑', '👵', '👴', '🐱', '🐶', '🐻']
 
 /** Modül seviyesinde: her render'da yeniden tanımlanırsa React alt ağacı
@@ -351,11 +348,11 @@ export function Settings({ db, kiosk, sync }: { db: DB; kiosk: boolean; sync: { 
       <Section title="Üst Bant Kapak Görseli" icon={<ImageIcon className="w-5 h-5 text-sky-500" />}>
         <div className="flex items-center gap-4 flex-wrap">
           {s.bandImage ? (
-            <div className="w-56 h-[104px]">
-              <BandCover src={s.bandImage} className="w-full h-full" />
+            <div className="w-40 h-[104px]">
+              <BandCover src={s.bandImage} filter={s.bandArtwork !== false} className="w-full h-full" />
             </div>
           ) : (
-            <div className="w-56 h-[104px] rounded-2xl bg-white/60 border border-dashed border-slate-300 grid place-items-center text-slate-300">
+            <div className="w-40 h-[104px] rounded-2xl bg-white/60 border border-dashed border-slate-300 grid place-items-center text-slate-300">
               <ImageIcon className="w-8 h-8" />
             </div>
           )}
@@ -380,18 +377,36 @@ export function Settings({ db, kiosk, sync }: { db: DB; kiosk: boolean; sync: { 
         </div>
 
         <p className="text-xs text-slate-400 font-medium">
-          Yüklediğiniz fotoğraf, üst bantta <b>suluboya illüstrasyona dönüştürülerek</b> gösterilir; kenarları
-          zemine karışır, çerçeve olmaz ve fotoğrafın tamamı görünür. Yatay (geniş) fotoğraflar en iyi
-          sonucu verir.
+          Yüklediğiniz görsel üst bantta gösterilir; kenarları zemine karışır, çerçeve olmaz ve
+          görselin tamamı görünür. <b>Dikey (portre)</b> fotoğraflar en iyi sonucu verir.
+        </p>
+
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="font-semibold text-slate-700">Suluboya filtresi uygula</div>
+            <div className="text-xs text-slate-400">
+              Fotoğrafı uygulama suluboya illüstrasyona dönüştürsün
+            </div>
+          </div>
+          <Toggle
+            checked={s.bandArtwork !== false}
+            onChange={(v) => saveSettings({ bandArtwork: v })}
+            label="Suluboya filtresi"
+          />
+        </div>
+        <p className="-mt-2 text-xs text-slate-400 font-medium">
+          Yukarıdaki prompt’la yapay zekâda hazır suluboya ürettiyseniz bu anahtarı kapatıp görseli
+          olduğu gibi gösterebilirsiniz.
         </p>
 
         {/* Hazır yapay zekâ prompt'u */}
         <details className="rounded-2xl bg-white/60 border border-white/70 p-3">
           <summary className="cursor-pointer text-sm font-extrabold text-slate-700 touch-manipulation">
-            ✨ Hazır suluboya görsel prompt'u (kopyala)
+            ✨ Aile suluboya prompt'u (kopyala)
           </summary>
           <p className="text-xs text-slate-500 font-medium mt-2 mb-2">
-            İsterseniz yapay zekâ görsel oluşturucuda kullanıp sonucu buradan yükleyebilirsiniz.
+            Referans fotoğrafınızı <b>image_0.png</b> olarak yükleyip yapay zekâ görsel oluşturucuda bu
+            prompt'u kullanın; çıkan dikey görseli aşağıdan yükleyin.
           </p>
           <pre className="text-[11px] leading-relaxed text-slate-600 bg-white/80 rounded-xl p-3 max-h-56 overflow-y-auto whitespace-pre-wrap font-sans">
 {ARTWORK_PROMPT}

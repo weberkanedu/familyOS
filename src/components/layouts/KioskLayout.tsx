@@ -1,4 +1,4 @@
-import { CalendarHeartIcon, CaretRightIcon, CaretDoubleLeftIcon } from '@phosphor-icons/react'
+import { CalendarHeartIcon, CaretUpIcon, CaretDownIcon } from '@phosphor-icons/react'
 import type { ReactNode } from 'react'
 import { NAV } from '../nav'
 import { Avatar, cx } from '../ui'
@@ -59,16 +59,6 @@ export function KioskLayout({
           collapsed ? 'w-[68px]' : 'w-32 xl:w-40',
         )}
       >
-        {/* Kenar tutamacı: şerit halinde, dikeyde ortalanmış */}
-        <button
-          type="button"
-          onClick={toggleNav}
-          className="absolute z-40 top-1/2 -translate-y-1/2 -right-[11px] w-[22px] h-16 rounded-full bg-white/80 hover:bg-white text-ink-900 shadow-lg ring-1 ring-black/5 grid place-items-center touch-manipulation transition-transform hover:scale-105 active:scale-95"
-          aria-label={collapsed ? 'Menüyü aç' : 'Menüyü gizle'}
-          title={collapsed ? 'Menüyü aç' : 'Menüyü gizle'}
-        >
-          {collapsed ? <CaretRightIcon className="w-3.5 h-3.5" weight="bold" /> : <CaretDoubleLeftIcon className="w-3.5 h-3.5" weight="bold" />}
-        </button>
 
         {/* Marka alanı: fotoğraf varsa tüm alanı kaplar */}
         {db.settings.familyPhoto ? (
@@ -121,9 +111,19 @@ export function KioskLayout({
           })}
         </nav>
 
-        {/* Aile yoncası + senkron durumu */}
+        {/* Aile yoncası + menü oku + senkron durumu */}
         <div className={cx('px-3 pt-3 mt-2 border-t border-white/10 flex flex-col items-center gap-2', collapsed && 'px-2')}>
           <FamilyClover members={db.members} size={collapsed ? 44 : 54} />
+          {/* Menüyü aç/kapat: yuvarlak, menü bandıyla aynı renk */}
+          <button
+            type="button"
+            onClick={toggleNav}
+            className="w-8 h-8 rounded-full bg-ink-900 text-white/80 hover:text-white hover:bg-ink-800 grid place-items-center touch-manipulation transition-transform hover:scale-105 active:scale-95 ring-1 ring-white/15"
+            aria-label={collapsed ? 'Menüyü aç' : 'Menüyü gizle'}
+            title={collapsed ? 'Menüyü aç' : 'Menüyü gizle'}
+          >
+            {collapsed ? <CaretUpIcon className="w-3.5 h-3.5" weight="bold" /> : <CaretDownIcon className="w-3.5 h-3.5" weight="bold" />}
+          </button>
           {!collapsed && (
             <div className="flex items-center justify-center gap-1.5 text-[11px] font-bold text-white/70">
               <span className={cx('w-2 h-2 rounded-full', SYNC_TONE[status])} />
@@ -160,7 +160,11 @@ export function KioskLayout({
           {/* Kapak görseli: suluboya illüstrasyon, kenarları zemine karışır (çerçevesiz) */}
           <div className="flex-1 min-w-0 flex items-center justify-center">
             {db.settings.bandImage ? (
-              <BandCover src={db.settings.bandImage} className="h-[104px] w-full max-w-[340px]" />
+              <BandCover
+                src={db.settings.bandImage}
+                filter={db.settings.bandArtwork !== false}
+                className="h-[104px] w-full max-w-[340px]"
+              />
             ) : null}
           </div>
 
