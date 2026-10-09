@@ -74,8 +74,9 @@ export function WeatherWidget({
   const lightText = todayStyle.text === 'light'
   const [picked, setPicked] = useState<{ day: WeatherData['days'][number] } | null>(null)
 
-  /* Seçilen günün büyük kartı (boşluğa / kapat düğmesine tıklayınca kapanır) */
-  const pickedStyle = picked ? styleFor(picked.day.weatherCode, true) : null
+  /* Seçilen gün: bugünse mevcut gece/gündüz durumu, ileri günse gündüz kabul edilir */
+  const pickedIsDay = picked ? (picked.day.date === todayKey() ? now?.isDay ?? true : true) : true
+  const pickedStyle = picked ? styleFor(picked.day.weatherCode, pickedIsDay) : null
   const pickedText = pickedStyle?.text === 'light'
 
   /* ============ KOMPAKT: üst bant ============ */
@@ -103,21 +104,27 @@ export function WeatherWidget({
               <span className="max-w-[96px] truncate">{city}</span>
               {locations.length > 1 && <span className="opacity-75">{locationIndex + 1}/{locations.length}</span>}
             </div>
+            {/* Günün en yüksek/düşük değerleri (diğer gün kartlarıyla aynı düzen) */}
             <div className="flex items-end gap-1 mt-0.5">
               <span className={cx('text-[38px] font-extrabold leading-none tabular-nums tracking-tight drop-shadow-sm', lightText ? 'text-white' : 'text-slate-900')}>
-                {now ? `${now.temp}°` : '—'}
+                {today ? `${today.max}°` : now ? `${now.temp}°` : '—'}
               </span>
-              {now && (
-                <span className={cx('text-[12px] font-bold mb-1 tabular-nums', lightText ? 'text-white/85' : 'text-slate-500')}>
-                  /{now.feelsLike}°
+              {today && (
+                <span className={cx('text-[14px] font-bold mb-1 tabular-nums', lightText ? 'text-white/85' : 'text-slate-500')}>
+                  /{today.min}°
                 </span>
               )}
             </div>
-            <div className={cx('text-[11px] font-bold mt-0.5 truncate max-w-[120px]', lightText ? 'text-white/95' : 'text-slate-700')}>
+            <div className={cx('text-[11px] font-bold mt-0.5 truncate max-w-[130px]', lightText ? 'text-white/95' : 'text-slate-700')}>
               {now ? wmoLabel(now.weatherCode) : loading ? 'yükleniyor…' : error ? 'veri yok' : '—'}
             </div>
+            {now && (
+              <div className={cx('text-[10px] font-bold tabular-nums', lightText ? 'text-white/80' : 'text-slate-500')}>
+                Şu an {now.temp}° · hissedilen {now.feelsLike}°
+              </div>
+            )}
           </div>
-          <WeatherArt code={now?.weatherCode ?? 2} isDay={now?.isDay ?? true} className="w-[92px] h-[72px] shrink-0 -mr-1" />
+          <WeatherArt code={now?.weatherCode ?? 2} isDay={now?.isDay ?? true} className="w-[88px] h-[70px] shrink-0 -mr-1" />
         </button>
 
         {/* 5 günlük haplar */}
@@ -163,6 +170,8 @@ export function WeatherWidget({
             city={city}
             bg={pickedStyle.bg}
             light={pickedText}
+            isDay={pickedIsDay}
+            current={picked.day.date === todayKey() ? now : undefined}
             onClose={() => setPicked(null)}
           />
         )}
@@ -284,7 +293,15 @@ export function WeatherWidget({
       </div>
 
       {picked && pickedStyle && (
-        <DayDetail day={picked.day} city={city} bg={pickedStyle.bg} light={pickedText} onClose={() => setPicked(null)} />
+        <DayDetail
+          day={picked.day}
+          city={city}
+          bg={pickedStyle.bg}
+          light={pickedText}
+          isDay={pickedIsDay}
+          current={picked.day.date === todayKey() ? now : undefined}
+          onClose={() => setPicked(null)}
+        />
       )}
     </div>
   )
@@ -296,12 +313,17 @@ function DayDetail({
   city,
   bg,
   light,
+  isDay = true,
+  current,
   onClose,
 }: {
   day: WeatherData['days'][number]
   city: string
   bg: string
   light: boolean
+  isDay?: boolean
+  /** Bugün seçildiyse anlık değerler */
+  current?: WeatherData['now']
   onClose: () => void
 }) {
   const content = (
@@ -312,7 +334,7 @@ function DayDetail({
         className="relative w-full max-w-md rounded-3xl overflow-hidden shadow-kiosk animate-pop my-auto"
         style={{ background: bg }}
       >
-        <WeatherScene code={day.weatherCode} isDay />
+        <WeatherScene code={day.weatherCode} isDay={isDay} />
         <div className="relative z-10 p-6 text-center">
           <div className={cx('flex items-center justify-between text-sm font-bold', light ? 'text-white/90' : 'text-slate-600')}>
             <span>{city}</span>
@@ -330,7 +352,7 @@ function DayDetail({
             {fmtDayName(parseKey(day.date))}, {fmtShort(day.date)}
           </div>
 
-          <WeatherArt code={day.weatherCode} className="w-[220px] h-[140px] mx-auto my-2" />
+          <WeatherArt code={day.weatherCode} isDay={isDay} className="w-[220px] h-[140px] mx-auto my-2" />
 
           <div className={cx('text-5xl font-extrabold tabular-nums drop-shadow-sm', light ? 'text-white' : 'text-slate-900')}>
             {day.max}°
@@ -341,6 +363,17 @@ function DayDetail({
           <div className={cx('mt-1 text-base font-bold', light ? 'text-white/95' : 'text-slate-700')}>
             {wmoLabel(day.weatherCode)}
           </div>
+
+          {current && (
+            <div
+              className={cx(
+                'mt-3 inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-bold',
+                light ? 'bg-white/20 text-white' : 'bg-black/10 text-slate-700',
+              )}
+            >
+              Şu an {current.temp}° · Hissedilen {current.feelsLike}°
+            </div>
+          )}
 
           <div className={cx('mt-4 pt-3 grid grid-cols-2 gap-2 text-sm font-bold border-t', light ? 'border-white/25 text-white/95' : 'border-black/10 text-slate-700')}>
             <div>💧 Yağış %{day.precipProb}</div>

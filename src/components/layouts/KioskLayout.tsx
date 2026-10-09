@@ -59,19 +59,18 @@ export function KioskLayout({
         )}
       >
 
-        {/* Marka alanı: fotoğraf varsa tüm alanı kaplar */}
-        {db.settings.familyPhoto ? (
-          <div className={cx('px-3 pb-3 mb-1 border-b border-white/10', collapsed && 'px-2')}>
+        {/* Marka alanı: aile fotoğrafı yalnızca menü açıkken görünür
+            (menü kapalıyken sanki hiç yokmuş gibi) */}
+        {!collapsed && db.settings.familyPhoto && (
+          <div className="px-3 pb-3 mb-1 border-b border-white/10">
             <img
               src={db.settings.familyPhoto}
               alt={db.settings.brandName || 'Aile'}
-              className={cx(
-                'w-full object-cover object-center rounded-2xl ring-2 ring-brand-400/50 shadow-lg',
-                collapsed ? 'h-14' : 'h-24',
-              )}
+              className="w-full h-24 object-cover object-center rounded-2xl ring-2 ring-brand-400/50 shadow-lg"
             />
           </div>
-        ) : (
+        )}
+        {(!db.settings.familyPhoto || collapsed) && (
           <div className={cx('px-4 pb-4 mb-2 border-b border-white/10', collapsed && 'px-2')}>
             <div className={cx('flex items-center gap-2.5', collapsed && 'justify-center')}>
               <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-600 grid place-items-center shrink-0 shadow-lg">
@@ -158,7 +157,8 @@ export function KioskLayout({
             </div>
             <div className="h-14 w-px bg-slate-300/60" />
             <div>
-              <div className="text-[32px] font-extrabold leading-none tracking-tight bg-gradient-to-b from-slate-400 via-slate-300 to-slate-100 bg-clip-text text-transparent">
+              {/* Yıl: temaya uygun düz renk (gradient yok) */}
+              <div className="text-[32px] font-extrabold leading-none tracking-tight text-brand-400">
                 {now.getFullYear()}
               </div>
               <div className="text-[12px] font-bold text-slate-400 leading-none mt-2 whitespace-nowrap">
