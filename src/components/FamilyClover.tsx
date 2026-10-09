@@ -37,9 +37,9 @@ export function FamilyClover({
 
   return (
     <svg
-      viewBox="0 0 100 112"
+      viewBox="0 0 100 96"
       width={size}
-      height={(size / 100) * 112}
+      height={(size / 100) * 96}
       className={cx('shrink-0 overflow-visible', className)}
       aria-label="Aile yoncası"
     >
@@ -57,11 +57,11 @@ export function FamilyClover({
         </linearGradient>
       </defs>
 
-      {/* Sap */}
+      {/* Sap: kısa ve ince, yoncanın altında fazla yer kaplamaz */}
       <path
-        d="M50 52 C 50 68, 47 80, 43 93 C 41 100, 40 104, 40 108"
+        d="M50 52 C 50 62, 48 70, 46 78"
         stroke={`url(#sg${uid})`}
-        strokeWidth="6.5"
+        strokeWidth="4.5"
         strokeLinecap="round"
         fill="none"
       />
