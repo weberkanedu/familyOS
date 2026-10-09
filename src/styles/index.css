@@ -262,6 +262,22 @@ svg {
   from { transform: translateX(-2px); }
   to { transform: translateX(2px); }
 }
+@keyframes fs-moon-glow {
+  0%, 100% { opacity: 0.82; }
+  50% { opacity: 1; }
+}
+/* Hava ikonu (react-icons wi): yumuşak salınım */
+@keyframes fs-icon-float {
+  0%, 100% { transform: translateY(-2.5%) scale(1); }
+  50% { transform: translateY(2.5%) scale(1.035); }
+}
+.fs-icon-float {
+  animation: fs-icon-float 7s ease-in-out infinite;
+  filter: drop-shadow(0 8px 18px rgba(15, 23, 42, 0.28));
+}
+@media (prefers-reduced-motion: reduce) {
+  .fs-icon-float { animation: none; }
+}
 
 /* Sahne değişiminde yumuşak geçiş */
 .fs-scene {

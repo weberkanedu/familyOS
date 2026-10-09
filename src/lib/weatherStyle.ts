@@ -28,17 +28,24 @@ export function styleFor(code: number, isDay = true): CondStyle {
         : { bg: 'linear-gradient(115deg,#1e3a8a 0%,#4338ca 60%,#312e81 100%)', text: 'light' }
     case 'partly':
       return isDay
-        ? { bg: 'linear-gradient(115deg,#a8d8ff 0%,#ffe6a8 70%,#ffd0a1 100%)', text: 'dark' }
-        : { bg: 'linear-gradient(115deg,#2b3f77 0%,#4b5b95 70%,#6b5f86 100%)', text: 'light' }
+        ? { bg: 'linear-gradient(115deg,#bfe3ff 0%,#ffeec4 70%,#ffd9ae 100%)', text: 'dark' }
+        : { bg: 'linear-gradient(115deg,#1c2440 0%,#2e3a5c 60%,#454b74 100%)', text: 'light' }
     case 'cloudy':
-      return { bg: 'linear-gradient(115deg,#cbd8e8 0%,#9fb2c7 70%,#8296ad 100%)', text: 'dark' }
+      return isDay
+        ? { bg: 'linear-gradient(115deg,#dbe6f2 0%,#c3d2e2 60%,#aebfd2 100%)', text: 'dark' }
+        : { bg: 'linear-gradient(115deg,#1b2537 0%,#28344a 60%,#3a465c 100%)', text: 'light' }
     case 'rain':
-      return { bg: 'linear-gradient(115deg,#8fd0f7 0%,#4b9fe0 65%,#2f6fb5 100%)', text: 'light' }
+      return isDay
+        ? { bg: 'linear-gradient(115deg,#8fd0f7 0%,#4b9fe0 65%,#2f6fb5 100%)', text: 'light' }
+        : { bg: 'linear-gradient(115deg,#2a3f58 0%,#22344c 60%,#182437 100%)', text: 'light' }
     case 'snow':
       return { bg: 'linear-gradient(115deg,#e8f4ff 0%,#bcd8ee 70%,#93b6d1 100%)', text: 'dark' }
     case 'storm':
       return { bg: 'linear-gradient(115deg,#5b6b85 0%,#33415c 60%,#1b2436 100%)', text: 'light' }
     case 'fog':
+      return isDay
+        ? { bg: 'linear-gradient(115deg,#eef2f7 0%,#d5dee8 70%,#bcc8d6 100%)', text: 'dark' }
+        : { bg: 'linear-gradient(115deg,#2a3242 0%,#384254 60%,#4a5568 100%)', text: 'light' }
     default:
       return { bg: 'linear-gradient(115deg,#e6ecf3 0%,#c3cedb 70%,#a6b4c4 100%)', text: 'dark' }
   }

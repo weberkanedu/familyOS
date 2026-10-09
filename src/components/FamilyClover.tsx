@@ -2,8 +2,9 @@ import type { Member } from '../types'
 import { cx } from './ui'
 
 /**
- * Gerçek yonca yaprağı: her üye bir yaprağın içinde (foto veya baş harf).
- * 1 kişi → tek yaprak, 2 → karşılıklı, 3 → üç yaprak, 4 → dört yaprak (klasik yonca).
+ * Gerçek dört yapraklı yonca: kalp biçimli yapraklar, merkezde birleşir,
+ * ortasından dört yaprak açılır ve tek bir sap aşağı iner.
+ * Her yaprağın ortasında üyenin fotoğrafı (yoksa baş harf) yer alır.
  */
 export function FamilyClover({
   members,
@@ -29,72 +30,75 @@ export function FamilyClover({
     )
   }
 
-  // Yaprak sayısına göre başlangıç açısı (tek yaprak yukarıda dursun)
-  const startAngle = shown.length === 1 ? 0 : shown.length === 2 ? 45 : 0
+  // Tek üye: yaprak yukarıda dursun ve sap aşağı insin
+  const count = shown.length
 
   return (
     <svg
-      viewBox="0 0 100 100"
+      viewBox="0 0 100 112"
       width={size}
-      height={size}
+      height={(size / 100) * 112}
       className={cx('shrink-0 overflow-visible', className)}
-      aria-label="Aile"
+      aria-label="Aile yoncası"
     >
       <title>{members.map((m) => m.name).join(', ')}</title>
+
       <defs>
         {shown.map((m, i) => (
-          <clipPath key={`c${uid}${i}`} id={`leaf-${uid}-${i}`}>
-            <path d="M50 56 C 34 46, 32 26, 50 12 C 68 26, 66 46, 50 56 Z" />
+          <clipPath key={`leaf${uid}${i}`} id={`cl-${uid}-${i}`}>
+            {/* Tek yaprak: merkezden (50,50) yukarı açılan kalp biçimli yaprak */}
+            <path d="M50 50 C 34 42, 22 34, 22 24 C 22 14, 33 10, 41 18 C 45 22, 48 27, 50 32 C 52 27, 55 22, 59 18 C 67 10, 78 14, 78 24 C 78 34, 66 42, 50 50 Z" />
           </clipPath>
         ))}
-        {/* Sap */}
-        <linearGradient id={`stem-${uid}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#4ade80" />
+        <linearGradient id={`stemg${uid}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#5ee08a" />
           <stop offset="100%" stopColor="#15803d" />
         </linearGradient>
       </defs>
 
-      {/* sap */}
+      {/* Sap: merkezden aşağı doğru kıvrılır */}
       <path
-        d="M50 58 C 50 74, 46 82, 42 92"
-        stroke={`url(#stem-${uid})`}
-        strokeWidth="5"
+        d="M50 50 C 50 66, 47 78, 43 92 C 41 99, 40 104, 40 108"
+        stroke={`url(#stemg${uid})`}
+        strokeWidth="6"
         strokeLinecap="round"
         fill="none"
       />
 
       {shown.map((m, i) => {
-        const angle = startAngle + (360 / shown.length) * i
+        // 4 üye → 45° şekilde dört yöne; 2 üye → çapraz; 1 üye → yukarı
+        const angle = count === 1 ? 0 : 45 + (360 / count) * i
+        const photoLeaf = i
         return (
-          <g key={m.id} transform={`rotate(${angle} 50 52)`}>
-            {/* yaprak gövdesi */}
+          <g key={m.id} transform={`rotate(${angle} 50 50)`}>
             <path
-              d="M50 56 C 34 46, 32 26, 50 12 C 68 26, 66 46, 50 56 Z"
+              d="M50 50 C 34 42, 22 34, 22 24 C 22 14, 33 10, 41 18 C 45 22, 48 27, 50 32 C 52 27, 55 22, 59 18 C 67 10, 78 14, 78 24 C 78 34, 66 42, 50 50 Z"
               fill={m.color}
-              stroke="rgba(255,255,255,0.85)"
+              stroke="rgba(255,255,255,0.9)"
               strokeWidth="2.5"
+              strokeLinejoin="round"
             />
-            {/* orta damar */}
-            <path d="M50 54 L50 16" stroke="rgba(255,255,255,0.5)" strokeWidth="1.6" strokeLinecap="round" />
+            {/* Yaprak damarı: merkezden uca */}
+            <path d="M50 50 L50 16" stroke="rgba(255,255,255,0.45)" strokeWidth="1.8" strokeLinecap="round" />
             {m.photo ? (
               <image
                 href={m.photo}
-                x="36"
-                y="18"
-                width="28"
-                height="34"
+                x="26"
+                y="12"
+                width="48"
+                height="38"
                 preserveAspectRatio="xMidYMid slice"
-                clipPath={`url(#leaf-${uid}-${i})`}
+                clipPath={`url(#cl-${uid}-${photoLeaf})`}
               />
             ) : (
               <text
                 x="50"
-                y="44"
+                y="30"
                 textAnchor="middle"
                 fontSize="17"
                 fontWeight="800"
                 fill="#ffffff"
-                style={{ fontFamily: 'inherit' }}
+                style={{ fontFamily: 'inherit', pointerEvents: 'none' }}
               >
                 {(m.name || '?').trim().charAt(0).toLocaleUpperCase('tr')}
               </text>
@@ -103,14 +107,14 @@ export function FamilyClover({
         )
       })}
 
-      {/* merkez */}
-      <circle cx="50" cy="55" r="5" fill="rgba(255,255,255,0.9)" />
-      <circle cx="50" cy="55" r="2.4" fill="#22c55e" />
+      {/* Merkez: dört yaprağın birleştiği nokta */}
+      <circle cx="50" cy="50" r="6" fill="#ffffff" opacity="0.92" />
+      <circle cx="50" cy="50" r="3" fill="#22c55e" />
 
       {extra > 0 && (
         <g>
-          <circle cx="88" cy="16" r="10" fill="#4f6ef7" stroke="#fff" strokeWidth="2.5" />
-          <text x="88" y="20" textAnchor="middle" fontSize="11" fontWeight="800" fill="#fff">
+          <circle cx="86" cy="22" r="11" fill="#4f6ef7" stroke="#fff" strokeWidth="2.5" />
+          <text x="86" y="26" textAnchor="middle" fontSize="11" fontWeight="800" fill="#fff">
             +{extra}
           </text>
         </g>

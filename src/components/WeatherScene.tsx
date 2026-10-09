@@ -10,6 +10,35 @@ function rand(i: number, salt: number): number {
   return x - Math.floor(x)
 }
 
+/** Gece yıldızları (sadece koyu sahnelerde) */
+function Stars() {
+  return (
+    <>
+      {Array.from({ length: 26 }).map((_, i) => {
+        const left = rand(i, 11) * 100
+        const top = rand(i, 12) * 88
+        const size = 1.6 + rand(i, 13) * 2.6
+        const dur = 2.4 + rand(i, 14) * 3.4
+        return (
+          <span
+            key={i}
+            className="absolute rounded-full bg-white"
+            style={{
+              left: `${left}%`,
+              top: `${top}%`,
+              width: size,
+              height: size,
+              opacity: 0.35 + rand(i, 15) * 0.5,
+              boxShadow: '0 0 6px rgba(255,255,255,0.8)',
+              animation: `fs-twinkle ${dur}s ease-in-out ${-rand(i, 16) * dur}s infinite`,
+            }}
+          />
+        )
+      })}
+    </>
+  )
+}
+
 /** Yağmur damlaları (iki katman → derinlik hissi) */
 function Drops({ count = 30, fast = false }: { count?: number; fast?: boolean }) {
   return (
@@ -129,16 +158,18 @@ export function WeatherScene({ code, isDay = true }: { code: number; isDay?: boo
           : 'linear-gradient(160deg,#0b1226 0%,#1c2748 50%,#312e81 100%)'
       case 'cloud':
         return isDay
-          ? 'linear-gradient(160deg,#63c4f5 0%,#7fb2f0 50%,#b9c9de 100%)'
-          : 'linear-gradient(160deg,#151d31 0%,#2b3853 60%,#41506d 100%)'
+          ? 'linear-gradient(160deg,#8ed2f7 0%,#a8c9f0 50%,#cbd8e6 100%)'
+          : 'linear-gradient(160deg,#101728 0%,#1e2a40 55%,#303d55 100%)'
       case 'rain':
-        return 'linear-gradient(160deg,#3b5878 0%,#37607f 55%,#15304f 100%)'
+        return 'linear-gradient(160deg,#33526f 0%,#2d5170 55%,#122940 100%)'
       case 'storm':
-        return 'linear-gradient(160deg,#141c2e 0%,#2b3550 45%,#080d18 100%)'
+        return 'linear-gradient(160deg,#0f1522 0%,#212a41 45%,#060a13 100%)'
       case 'snow':
         return 'linear-gradient(160deg,#7e93ad 0%,#b9c9de 55%,#e6edf5 100%)'
       case 'fog':
-        return 'linear-gradient(160deg,#c2ccd8 0%,#dee5ee 60%,#f1f5f9 100%)'
+        return isDay
+          ? 'linear-gradient(160deg,#d2dae4 0%,#e6ecf3 60%,#f5f8fb 100%)'
+          : 'linear-gradient(160deg,#252d3c 0%,#333c4e 60%,#454f63 100%)'
       default:
         return 'linear-gradient(160deg,#4f8ef7 0%,#818cf8 100%)'
     }
@@ -146,37 +177,65 @@ export function WeatherScene({ code, isDay = true }: { code: number; isDay?: boo
 
   return (
     <div className={cx('absolute inset-0 overflow-hidden pointer-events-none', 'fs-scene')} style={{ background: sky }}>
-      {/* Güneş / ay + dönen ışınlar */}
-      {(group === 'clear' || group === 'cloud') && (
-        <>
-          <div
-            className="absolute rounded-full"
-            style={{
-              top: '-16%',
-              right: '-8%',
-              width: 260,
-              height: 260,
-              background:
-                'conic-gradient(from 0deg, rgba(255,255,255,0) 0deg, rgba(253,230,138,0.32) 18deg, rgba(255,255,255,0) 40deg, rgba(253,230,138,0.28) 78deg, rgba(255,255,255,0) 100deg, rgba(255,255,255,0) 180deg, rgba(253,230,138,0.26) 200deg, rgba(255,255,255,0) 222deg, rgba(253,230,138,0.3) 260deg, rgba(255,255,255,0) 285deg)',
-              willChange: 'transform',
-              animation: 'fs-rays 40s linear infinite',
-            }}
-          />
-          <div
-            className="absolute rounded-full"
-            style={{
-              top: '-14%',
-              right: '-6%',
-              width: 190,
-              height: 190,
-              background: isDay
-                ? 'radial-gradient(circle, #fffbeb 0%, #fde68a 40%, rgba(253,230,138,0) 70%)'
-                : 'radial-gradient(circle, #f8fafc 0%, #cbd5e1 45%, rgba(203,213,225,0) 72%)',
-              animation: 'fs-sun-pulse 5s ease-in-out infinite',
-            }}
-          />
-        </>
-      )}
+      {/* Güneş (gündüz: ışınlı) / Ay (gece: ışınsız, sadece yumuşak hale + yıldızlar) */}
+      {(group === 'clear' || group === 'cloud') &&
+        (isDay ? (
+          <>
+            <div
+              className="absolute rounded-full"
+              style={{
+                top: '-16%',
+                right: '-8%',
+                width: 260,
+                height: 260,
+                background:
+                  'conic-gradient(from 0deg, rgba(255,255,255,0) 0deg, rgba(253,230,138,0.32) 18deg, rgba(255,255,255,0) 40deg, rgba(253,230,138,0.28) 78deg, rgba(255,255,255,0) 100deg, rgba(255,255,255,0) 180deg, rgba(253,230,138,0.26) 200deg, rgba(255,255,255,0) 222deg, rgba(253,230,138,0.3) 260deg, rgba(255,255,255,0) 285deg)',
+                willChange: 'transform',
+                animation: 'fs-rays 40s linear infinite',
+              }}
+            />
+            <div
+              className="absolute rounded-full"
+              style={{
+                top: '-14%',
+                right: '-6%',
+                width: 190,
+                height: 190,
+                background: 'radial-gradient(circle, #fffbeb 0%, #fde68a 40%, rgba(253,230,138,0) 70%)',
+                animation: 'fs-sun-pulse 5s ease-in-out infinite',
+              }}
+            />
+          </>
+        ) : (
+          <>
+            {/* Ay: kırpılan disk + yumuşak hale (ışın yok) */}
+            <div
+              className="absolute rounded-full"
+              style={{
+                top: '-10%',
+                right: '-4%',
+                width: 150,
+                height: 150,
+                background: 'radial-gradient(circle, rgba(248,250,252,0.55) 0%, rgba(203,213,225,0.22) 48%, rgba(148,163,184,0) 72%)',
+                animation: 'fs-sun-pulse 7s ease-in-out infinite',
+              }}
+            />
+            <div
+              className="absolute rounded-full"
+              style={{
+                top: '-9%',
+                right: '-3%',
+                width: 54,
+                height: 54,
+                background: '#f8fafc',
+                boxShadow: 'inset -14px -8px 0 -2px rgba(148,163,184,0.55), 0 0 24px rgba(226,232,240,0.45)',
+                animation: 'fs-moon-glow 7s ease-in-out infinite',
+              }}
+            />
+            {/* Yıldızlar (yalnızca gece) */}
+            <Stars />
+          </>
+        ))}
 
       {/* Bulutlar */}
       {(group === 'cloud' || group === 'rain' || group === 'storm' || group === 'snow') && (

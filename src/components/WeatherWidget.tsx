@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { DropSimpleIcon, SunHorizonIcon, MoonStarsIcon, ThermometerHotIcon } from '@phosphor-icons/react'
 import { wmoLabel } from '../lib/openMeteo'
 import type { WeatherData } from '../lib/openMeteo'
 import { styleFor, dirLabel } from '../lib/weatherStyle'
@@ -375,11 +376,30 @@ function DayDetail({
             </div>
           )}
 
-          <div className={cx('mt-4 pt-3 grid grid-cols-2 gap-2 text-sm font-bold border-t', light ? 'border-white/25 text-white/95' : 'border-black/10 text-slate-700')}>
-            <div>💧 Yağış %{day.precipProb}</div>
-            <div>🌅 Doğum {day.sunrise ?? '—'}</div>
-            <div>🌇 Batım {day.sunset ?? '—'}</div>
-            <div>🌡️ Gün içi {day.max - day.min}° fark</div>
+          <div
+            className={cx(
+              'mt-4 pt-3 grid grid-cols-2 gap-x-3 gap-y-2.5 text-[15px] font-bold border-t',
+              light
+                ? 'border-white/25 text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.45)]'
+                : 'border-black/10 text-slate-700',
+            )}
+          >
+            <div className="flex items-center gap-1.5">
+              <DropSimpleIcon weight="fill" className={cx('w-[18px] h-[18px]', light ? 'text-sky-200' : 'text-sky-500')} />
+              Yağış %{day.precipProb}
+            </div>
+            <div className="flex items-center gap-1.5">
+              <SunHorizonIcon weight="fill" className={cx('w-[18px] h-[18px]', light ? 'text-amber-200' : 'text-amber-500')} />
+              Doğum {day.sunrise ?? '—'}
+            </div>
+            <div className="flex items-center gap-1.5">
+              <MoonStarsIcon weight="fill" className={cx('w-[18px] h-[18px]', light ? 'text-indigo-200' : 'text-indigo-500')} />
+              Batım {day.sunset ?? '—'}
+            </div>
+            <div className="flex items-center gap-1.5">
+              <ThermometerHotIcon weight="fill" className={cx('w-[18px] h-[18px]', light ? 'text-rose-200' : 'text-rose-500')} />
+              Gün içi {day.max - day.min}° fark
+            </div>
           </div>
         </div>
       </div>
