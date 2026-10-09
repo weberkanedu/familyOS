@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import type { Member } from '../types'
 import { cx } from './ui'
 
@@ -21,7 +22,10 @@ export function FamilyClover({
 }) {
   const shown = members.slice(0, 4)
   const extra = members.length - shown.length
-  const uid = Math.random().toString(36).slice(2, 8)
+  // Math.random() her render'da değişiyordu: clipPath id'leri çakışıyor,
+  // fotoğraflar yanlış yapraktaki maskeye uyuyor ve yoncanın dışına taşıyordu.
+  // useId() render'dan bağımsız, benzersiz ve kararlı bir id verir.
+  const uid = useId().replace(/[^a-zA-Z0-9]/g, '')
   const count = shown.length
 
   if (!count) {
@@ -79,16 +83,19 @@ export function FamilyClover({
               strokeLinejoin="round"
             />
             {m.photo ? (
-              /* Fotoğraf yaprağın içini neredeyse tamamen doldurur */
-              <image
-                href={m.photo}
-                x="10"
-                y="8"
-                width="80"
-                height="45"
-                preserveAspectRatio="xMidYMid slice"
-                clipPath={`url(#cl-${uid}-${i})`}
-              />
+              /* Fotoğraf yalnızca kendi yaprağının maskesiyle kırpılır.
+                 clipPath bu <g> dönüşünü de içerir, bu yüzden fotoğraf
+                 yapraktan taşmaz. */
+              <g clipPath={`url(#cl-${uid}-${i})`}>
+                <image
+                  href={m.photo}
+                  x="8"
+                  y="6"
+                  width="84"
+                  height="48"
+                  preserveAspectRatio="xMidYMid slice"
+                />
+              </g>
             ) : (
               <text
                 x="50"
