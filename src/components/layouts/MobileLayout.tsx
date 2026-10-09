@@ -55,7 +55,7 @@ export function MobileLayout({
     <div className="min-h-screen flex flex-col mesh-bg text-slate-900" data-theme={themeById(db.settings.theme).id}>
       <header className="sticky top-0 z-30 bg-white/60 backdrop-blur-xl border-b border-white/60 h-14 flex items-center justify-between px-4 gap-3">
         <div className="flex items-center gap-2.5 min-w-0">
-          <span className="font-display text-[17px] tracking-tight text-brand-700">{db.settings.brandName || 'İÇİL Ailesi'}</span>
+          <span className="font-display text-[17px] tracking-tight text-brand-700">{db.settings.brandName || 'Aile Panosu'}</span>
           <span className="text-slate-300 font-bold">·</span>
           <span className="font-semibold text-slate-600 truncate">{current?.label ?? 'Ana Sayfa'}</span>
         </div>

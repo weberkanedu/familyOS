@@ -22,7 +22,7 @@ const ENTITY_KEYS = new Set([
 ])
 
 const DEFAULT_SETTINGS = {
-  id: 'main', familyName: 'İÇİL Ailesi', mode: 'auto', idleMinutes: 3, city: 'Ankara 06070',
+  id: 'main', familyName: 'Aile Panosu', mode: 'auto', idleMinutes: 3, city: 'Ankara 06070',
   lat: 39.9208, lon: 32.8541, weatherEnabled: true, soundEnabled: true, soundMode: 'wall',
   savedLocations: [{ label: 'Ankara 06070', lat: 39.9208, lon: 32.8541, home: true }],
   updatedAt: Date.now(),

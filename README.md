@@ -1,4 +1,4 @@
-# 🏠 İÇİL Ailesi — Akıllı Aile Takvimi ve Ev Panosu
+# 🏠 Aile Panosu — Akıllı Aile Takvimi ve Ev Panosu
 
 Duvara asılan tablet (**Kiosk modu**) + aile bireylerinin telefonları (**PWA**) için
 gerçek zamanlı senkronize çalışan, modüler ve hafif aile işletim sistemi.

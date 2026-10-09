@@ -181,8 +181,8 @@ export function Settings({ db, kiosk, sync }: { db: DB; kiosk: boolean; sync: { 
       <Section title="Aile Adı" icon={<TextTIcon className="w-5 h-5 text-brand-500" />}>
         <Field label="Sol üstte görünen isim">
           <Input
-            value={s.brandName ?? 'İÇİL Ailesi'}
-            placeholder="Örn. İÇİL Ailesi"
+            value={s.brandName ?? 'Aile Panosu'}
+            placeholder="Örn. Aile Panosu"
             onChange={(e) => saveSettings({ brandName: e.target.value })}
           />
         </Field>

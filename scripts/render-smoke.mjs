@@ -30,7 +30,7 @@ try {
 
   const html = renderToString(React.createElement(App))
   const checks = [
-    ['Marka adi', html.includes('\u0130\u00C7\u0130L Ailesi')],
+    ['Marka adi', html.includes('Aile Panosu')],
     ['Beslenme kisayolu', html.includes('Beslenme')],
     ['Ders programi kisayolu', html.includes('Ders Program')],
     ['Uye avatarlari', html.includes('\u{1F469}\u{1F3FD}') || html.includes('emoji')],

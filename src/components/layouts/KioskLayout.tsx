@@ -79,7 +79,7 @@ export function KioskLayout({
               </div>
               {!collapsed && (
                 <div className="leading-tight min-w-0">
-                  <div className="font-display text-[17px] leading-tight truncate">{db.settings.brandName || 'İÇİL Ailesi'}</div>
+                  <div className="font-display text-[17px] leading-tight truncate">{db.settings.brandName || 'Aile Panosu'}</div>
                   <div className="text-[11px] text-white/60 truncate">{db.settings.city || HOME.city}</div>
                 </div>
               )}
@@ -110,15 +110,20 @@ export function KioskLayout({
           })}
         </nav>
 
-        {/* Aile yoncası + menü oku (şeridin tam ortası, yoncanın hizasında) + senkron durumu */}
-        <div className={cx('px-3 pt-3 mt-2 border-t border-white/10 flex flex-col items-center gap-2', collapsed && 'px-2')}>
-          <div className="relative">
+        {/* Aile yoncası + menü oku + senkron durumu
+            (ok: şeridin tam kenarında, yarısı içeride yarısı dışarıda taşacak şekilde) */}
+        <div className="pt-3 mt-2 border-t border-white/10 flex flex-col items-center gap-2">
+          <div className="relative w-full flex justify-center">
             <FamilyClover members={db.members} size={collapsed ? 44 : 54} />
-            {/* Menüyü aç/kapat: yuvarlak, menü bandıyla aynı renk, yoncanın hizasında */}
             <button
               type="button"
               onClick={toggleNav}
-              className="absolute right-[-13px] top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-ink-900 text-white/85 hover:text-white hover:bg-ink-800 grid place-items-center touch-manipulation transition-transform hover:scale-110 active:scale-95 ring-1 ring-white/25 shadow"
+              className={cx(
+                'absolute right-0 top-1/2 w-7 h-7 rounded-full grid place-items-center touch-manipulation',
+                'translate-x-1/2 -translate-y-1/2',
+                'bg-ink-950 text-white/90 hover:text-white hover:bg-ink-900',
+                'ring-[3px] ring-white/90 shadow-md transition-transform hover:scale-110 active:scale-95',
+              )}
               aria-label={collapsed ? 'Menüyü aç' : 'Menüyü gizle'}
               title={collapsed ? 'Menüyü aç' : 'Menüyü gizle'}
             >

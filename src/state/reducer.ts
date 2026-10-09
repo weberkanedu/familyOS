@@ -4,8 +4,8 @@ import { ENTITY_KEYS } from '../types'
 export function defaultSettings(): Settings {
   return {
     id: 'main',
-    familyName: 'İÇİL Ailesi',
-    brandName: 'İÇİL Ailesi',
+    familyName: 'Ailem',
+    brandName: 'Aile Panosu',
     theme: 'classic',
     navCollapsed: false,
     mode: 'auto',

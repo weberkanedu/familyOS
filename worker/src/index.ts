@@ -40,7 +40,7 @@ function emptyDB(): DB {
     lessons: [],
     settings: {
       id: 'main',
-      familyName: 'İÇİL Ailesi',
+      familyName: 'Aile Panosu',
       mode: 'auto',
       idleMinutes: 3,
       city: 'Ankara 06070',
