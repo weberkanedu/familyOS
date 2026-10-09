@@ -121,26 +121,6 @@
   --mesh-4: rgba(241, 245, 249, 0.95);
 }
 
-/* Caveat — zarif el yazısı (kartpostal altyazısı) */
-@font-face {
-  font-family: 'Caveat';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('/fonts/caveat-latin-ext.woff2') format('woff2');
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
-    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-@font-face {
-  font-family: 'Caveat';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('/fonts/caveat-latin.woff2') format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
-    U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-
 :root {
   color-scheme: light;
 }
@@ -359,32 +339,5 @@ svg {
     radial-gradient(32rem 24rem at 18% 98%, var(--mesh-4), transparent 62%);
   background-attachment: fixed;
   transition: background-color 0.4s ease;
-}
-
-/* ============================================================
-   Suluboya kapak efekti (üst bant görseli)
-   ============================================================ */
-.watercolor-img {
-  filter: url('#watercolor');
-  mix-blend-mode: multiply;
-  opacity: 0.94;
-  transform: scale(1.04);
-  -webkit-mask-image: radial-gradient(115% 115% at 50% 45%, #000 48%, rgba(0, 0, 0, 0.55) 72%, transparent 100%);
-  mask-image: radial-gradient(115% 115% at 50% 45%, #000 48%, rgba(0, 0, 0, 0.55) 72%, transparent 100%);
-}
-
-/* Kapak: kenarları zemine karışan, çerçevesiz suluboya görsel */
-.watercolor-cover {
-  filter: url('#watercolor') saturate(0.78) contrast(0.94) brightness(1.06);
-  mix-blend-mode: multiply;
-  /* Kenarlar yumuşakça erir → zeminle uyum, çerçeve yok */
-  -webkit-mask-image: radial-gradient(118% 128% at 50% 50%, #000 62%, rgba(0, 0, 0, 0.75) 84%, transparent 100%);
-  mask-image: radial-gradient(118% 128% at 50% 50%, #000 62%, rgba(0, 0, 0, 0.75) 84%, transparent 100%);
-}
-
-/* Filtre desteklenmeyen tarayıcılar için yumuşak yedek */
-@supports not (filter: url('#watercolor')) {
-  .watercolor-img { filter: saturate(0.85) contrast(0.95); }
-  .watercolor-cover { filter: saturate(0.85) contrast(0.95) brightness(1.04); }
 }
 

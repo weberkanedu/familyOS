@@ -163,7 +163,7 @@ export function NutritionPopup({
                     type="time"
                     value={editDraft.time}
                     onChange={(e) => setEditDraft((d) => ({ ...d, time: e.target.value }))}
-                    className="h-10 w-28"
+                    className="h-10 !w-28 shrink-0"
                   />
                   <Input
                     autoFocus
@@ -220,7 +220,7 @@ export function NutritionPopup({
                 type="time"
                 value={draft.time}
                 onChange={(e) => setDraft((d) => ({ ...d, time: e.target.value }))}
-                className="h-11 w-28 shrink-0"
+                className="h-11 !w-28 shrink-0"
               />
               <Input
                 value={draft.title}

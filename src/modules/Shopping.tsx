@@ -131,10 +131,10 @@ export function Shopping({ db, kiosk }: { db: DB; kiosk: boolean }) {
             value={qty}
             onChange={(e) => setQty(e.target.value)}
             placeholder="Miktar"
-            className="h-10 w-28"
+            className="h-10 !w-28 shrink-0"
             inputMode="text"
           />
-          <Select value={byId} onChange={(e) => setById(e.target.value)} className="h-10 w-auto">
+          <Select value={byId} onChange={(e) => setById(e.target.value)} className="h-10 !w-auto shrink-0">
             {db.members.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.emoji} {m.name}

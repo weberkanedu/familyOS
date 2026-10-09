@@ -1,4 +1,4 @@
-import { MagnifyingGlassIcon, PlusIcon, TrashIcon, DownloadSimpleIcon, UploadSimpleIcon, ArrowsClockwiseIcon, BellIcon, BellRingingIcon, UsersIcon, MonitorIcon, MapPinIcon, ArrowClockwiseIcon, ImageIcon, TextTIcon, PaletteIcon, CopyIcon } from '@phosphor-icons/react'
+import { MagnifyingGlassIcon, PlusIcon, TrashIcon, DownloadSimpleIcon, UploadSimpleIcon, ArrowsClockwiseIcon, BellIcon, BellRingingIcon, UsersIcon, MonitorIcon, MapPinIcon, ArrowClockwiseIcon, ImageIcon, TextTIcon, PaletteIcon } from '@phosphor-icons/react'
 import { useEffect, useRef, useState } from 'react'
 import { Btn, Card, Chip, Field, Input, Modal, SectionTitle, Toggle, cx, Avatar, Select, GlassCard } from '../components/ui'
 import { addLocation, deleteMember, removeLocation, saveMember, saveSettings, selectLocation } from '../state/actions'
@@ -7,22 +7,11 @@ import { searchPlaces, type GeoPlace } from '../lib/openMeteo'
 import { disablePush, enablePush, permissionState, pushSupported } from '../lib/push'
 import { fileToDataUrl, approxKb } from '../lib/image'
 import { THEMES } from '../lib/themes'
-import { BandCover } from '../components/BandCover'
 import { HOME } from '../lib/location'
 import type { AppMode, DB, Member, Role, SoundMode } from '../types'
 
 const COLORS = ['#f97362', '#4f6ef7', '#22c55e', '#f59e0b', '#a855f7', '#06b6d4', '#ec4899', '#84cc16']
 
-/** Üst bant kapak görseli için hazır yapay zekâ prompt'u */
-const ARTWORK_PROMPT = `A delicate, hand-painted watercolor illustration of the family from image_0.png, completely isolated on a flat, pure white background with absolutely no text, captions, or horizontal lines.
-
-The image focuses entirely on the family of three: the mother, the father, and the toddler in denim overalls, preserving their exact happy poses, natural sits, and affectionate interactions from the reference photo.
-
-The artwork is rendered in a natural, artistic style using loose, transparent watercolor washes in a soft palette of denim blues, warm earth tones, and gentle skin shades. Fine, sketchy ink outlines define their features, hair, and clothing folds. Natural watercolor textures, soft edges, visible brush strokes, and delicate pigment bleeding give the figures a handmade character. The paint gently fades out and bleeds naturally into the surrounding white space at the outer edges of their bodies, particularly where they sit on the invisible ground.
-
-The figures are closely grouped together on the floor with absolutely no background elements, seating, shadows, borders, or paper textures outside of their painted forms, leaving the surrounding white space entirely empty and blank.
-
-The overall image is a clean, vertical portrait with generous margins of pure white, capturing a warm, nostalgic, and artistic aesthetic, entirely focused on the family and ready to be placed seamlessly onto any background.`
 const EMOJIS = ['👩🏽', '👨🏽', '🧒🏻', '👦🏻', '👩', '👨', '👧', '👦', '🧑', '👵', '👴', '🐱', '🐶', '🐻']
 
 /** Modül seviyesinde: her render'da yeniden tanımlanırsa React alt ağacı
@@ -57,7 +46,6 @@ export function Settings({ db, kiosk, sync }: { db: DB; kiosk: boolean; sync: { 
   const [photoNote, setPhotoNote] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement | null>(null)
   const photoRef = useRef<HTMLInputElement | null>(null)
-  const bandRef = useRef<HTMLInputElement | null>(null)
   const memberPhotoRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
@@ -123,22 +111,7 @@ export function Settings({ db, kiosk, sync }: { db: DB; kiosk: boolean; sync: { 
     }
   }
 
-  const onPickBand = async (f: File | null) => {
-    if (!f) return
-    setPhotoBusy(true)
-    try {
-      // Yatay kapak: genişliği koruyarak kırpma yok (maxSize=0 → boyut sınırı yok)
-      const url = await fileToDataUrl(f, 0, 0.92)
-      saveSettings({ bandImage: url })
-      setPhotoNote(`Yüklendi · yaklaşık ${approxKb(url)} KB`)
-    } catch {
-      alert('Görsel okunamadı')
-    } finally {
-      setPhotoBusy(false)
-    }
-  }
-
-    const onPickMemberPhoto = async (f: File | null) => {
+  const onPickMemberPhoto = async (f: File | null) => {
     if (!f || !md) return
     setPhotoBusy(true)
     try {
@@ -342,87 +315,6 @@ export function Settings({ db, kiosk, sync }: { db: DB; kiosk: boolean; sync: { 
           </div>
           <Toggle checked={!!s.navCollapsed} onChange={(v) => saveSettings({ navCollapsed: v })} label="Menüyü gizle" />
         </div>
-      </Section>
-
-      {/* Üst bant kapak görseli */}
-      <Section title="Üst Bant Kapak Görseli" icon={<ImageIcon className="w-5 h-5 text-sky-500" />}>
-        <div className="flex items-center gap-4 flex-wrap">
-          {s.bandImage ? (
-            <div className="w-40 h-[104px]">
-              <BandCover src={s.bandImage} filter={s.bandArtwork !== false} className="w-full h-full" />
-            </div>
-          ) : (
-            <div className="w-40 h-[104px] rounded-2xl bg-white/60 border border-dashed border-slate-300 grid place-items-center text-slate-300">
-              <ImageIcon className="w-8 h-8" />
-            </div>
-          )}
-          <div className="flex flex-col gap-2 items-start">
-            <input
-              ref={bandRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => void onPickBand(e.target.files?.[0] ?? null)}
-            />
-            <Btn variant="soft" onClick={() => bandRef.current?.click()} disabled={photoBusy}>
-              <UploadSimpleIcon className="w-4 h-4" />
-              {photoBusy ? 'Yükleniyor…' : s.bandImage ? 'Değiştir' : 'Görsel yükle'}
-            </Btn>
-            {s.bandImage && (
-              <Btn variant="ghost" onClick={() => saveSettings({ bandImage: undefined })}>
-                <TrashIcon className="w-4 h-4" /> Kaldır
-              </Btn>
-            )}
-          </div>
-        </div>
-
-        <p className="text-xs text-slate-400 font-medium">
-          Yüklediğiniz görsel üst bantta gösterilir; kenarları zemine karışır, çerçeve olmaz ve
-          görselin tamamı görünür. <b>Dikey (portre)</b> fotoğraflar en iyi sonucu verir.
-        </p>
-
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <div className="font-semibold text-slate-700">Suluboya filtresi uygula</div>
-            <div className="text-xs text-slate-400">
-              Fotoğrafı uygulama suluboya illüstrasyona dönüştürsün
-            </div>
-          </div>
-          <Toggle
-            checked={s.bandArtwork !== false}
-            onChange={(v) => saveSettings({ bandArtwork: v })}
-            label="Suluboya filtresi"
-          />
-        </div>
-        <p className="-mt-2 text-xs text-slate-400 font-medium">
-          Yukarıdaki prompt’la yapay zekâda hazır suluboya ürettiyseniz bu anahtarı kapatıp görseli
-          olduğu gibi gösterebilirsiniz.
-        </p>
-
-        {/* Hazır yapay zekâ prompt'u */}
-        <details className="rounded-2xl bg-white/60 border border-white/70 p-3">
-          <summary className="cursor-pointer text-sm font-extrabold text-slate-700 touch-manipulation">
-            ✨ Aile suluboya prompt'u (kopyala)
-          </summary>
-          <p className="text-xs text-slate-500 font-medium mt-2 mb-2">
-            Referans fotoğrafınızı <b>image_0.png</b> olarak yükleyip yapay zekâ görsel oluşturucuda bu
-            prompt'u kullanın; çıkan dikey görseli aşağıdan yükleyin.
-          </p>
-          <pre className="text-[11px] leading-relaxed text-slate-600 bg-white/80 rounded-xl p-3 max-h-56 overflow-y-auto whitespace-pre-wrap font-sans">
-{ARTWORK_PROMPT}
-          </pre>
-          <Btn
-            variant="soft"
-            size="sm"
-            className="mt-2"
-            onClick={() => {
-              navigator.clipboard?.writeText(ARTWORK_PROMPT)
-              setPhotoNote('Prompt kopyalandı ✓')
-            }}
-          >
-            <CopyIcon className="w-4 h-4" /> Prompt'u kopyala
-          </Btn>
-        </details>
       </Section>
 
       <Section title="Ekran & Kiosk" icon={<MonitorIcon className="w-5 h-5 text-violet-500" />}>

@@ -1,4 +1,4 @@
-import { CalendarHeartIcon, CaretUpIcon, CaretDownIcon } from '@phosphor-icons/react'
+import { CalendarHeartIcon, CaretLeftIcon, CaretRightIcon } from '@phosphor-icons/react'
 import type { ReactNode } from 'react'
 import { NAV } from '../nav'
 import { Avatar, cx } from '../ui'
@@ -11,7 +11,6 @@ import { themeById } from '../../lib/themes'
 import { saveSettings } from '../../state/actions'
 import { WeatherWidget, type WeatherWidgetProps } from '../WeatherWidget'
 import { FamilyClover } from '../FamilyClover'
-import { BandCover } from '../BandCover'
 import type { DB, SavedLocation } from '../../types'
 import type { TabKey } from '../../state/store'
 import { IdleScreen, MessageFlash } from '../IdleScreen'
@@ -111,19 +110,25 @@ export function KioskLayout({
           })}
         </nav>
 
-        {/* Aile yoncası + menü oku + senkron durumu */}
+        {/* Aile yoncası + menü oku (şeridin tam ortası, yoncanın hizasında) + senkron durumu */}
         <div className={cx('px-3 pt-3 mt-2 border-t border-white/10 flex flex-col items-center gap-2', collapsed && 'px-2')}>
-          <FamilyClover members={db.members} size={collapsed ? 44 : 54} />
-          {/* Menüyü aç/kapat: yuvarlak, menü bandıyla aynı renk */}
-          <button
-            type="button"
-            onClick={toggleNav}
-            className="w-8 h-8 rounded-full bg-ink-900 text-white/80 hover:text-white hover:bg-ink-800 grid place-items-center touch-manipulation transition-transform hover:scale-105 active:scale-95 ring-1 ring-white/15"
-            aria-label={collapsed ? 'Menüyü aç' : 'Menüyü gizle'}
-            title={collapsed ? 'Menüyü aç' : 'Menüyü gizle'}
-          >
-            {collapsed ? <CaretUpIcon className="w-3.5 h-3.5" weight="bold" /> : <CaretDownIcon className="w-3.5 h-3.5" weight="bold" />}
-          </button>
+          <div className="relative">
+            <FamilyClover members={db.members} size={collapsed ? 44 : 54} />
+            {/* Menüyü aç/kapat: yuvarlak, menü bandıyla aynı renk, yoncanın hizasında */}
+            <button
+              type="button"
+              onClick={toggleNav}
+              className="absolute right-[-13px] top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-ink-900 text-white/85 hover:text-white hover:bg-ink-800 grid place-items-center touch-manipulation transition-transform hover:scale-110 active:scale-95 ring-1 ring-white/25 shadow"
+              aria-label={collapsed ? 'Menüyü aç' : 'Menüyü gizle'}
+              title={collapsed ? 'Menüyü aç' : 'Menüyü gizle'}
+            >
+              {collapsed ? (
+                <CaretRightIcon className="w-3.5 h-3.5" weight="bold" />
+              ) : (
+                <CaretLeftIcon className="w-3.5 h-3.5" weight="bold" />
+              )}
+            </button>
+          </div>
           {!collapsed && (
             <div className="flex items-center justify-center gap-1.5 text-[11px] font-bold text-white/70">
               <span className={cx('w-2 h-2 rounded-full', SYNC_TONE[status])} />
@@ -157,19 +162,8 @@ export function KioskLayout({
             </div>
           </div>
 
-          {/* Kapak görseli: suluboya illüstrasyon, kenarları zemine karışır (çerçevesiz) */}
-          <div className="flex-1 min-w-0 flex items-center justify-center">
-            {db.settings.bandImage ? (
-              <BandCover
-                src={db.settings.bandImage}
-                filter={db.settings.bandArtwork !== false}
-                className="h-[104px] w-full max-w-[340px]"
-              />
-            ) : null}
-          </div>
-
           {/* Hava: yatay widget (solda bugün, sağda 5 gün, kaydır: şehir değişir) */}
-          <div className="shrink-0">
+          <div className="flex-1 min-w-0 flex justify-end">
             <WeatherWidget {...weather} compact />
           </div>
 

@@ -173,12 +173,6 @@ export interface Settings {
   theme?: string
   /** Sol menü daraltılmış mı? */
   navCollapsed?: boolean
-  /** Üst bant kapak görseli (data URL, suluboya efektiyle) */
-  bandImage?: string
-  /** Kapak görselinde foto + suluboya editoryal kompozisyonu kullanılsın mı */
-  bandArtwork?: boolean
-  /** Kapak altyazısı (el yazısı) */
-  bandCaption?: string
   mode: AppMode
   idleMinutes: number
   city: string
