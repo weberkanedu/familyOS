@@ -135,7 +135,7 @@ export function KioskLayout({
 
       {/* İçerik */}
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="shrink-0 bg-white/45 backdrop-blur-xl border-b border-white/60 px-6 py-3.5 flex items-center gap-6">
+        <header className="shrink-0 bg-white/45 backdrop-blur-xl border-b border-white/60 px-6 py-4 flex items-center gap-6">
           {/* Tarih: solda gün/ay + haftanın günü, sağda yıl + yılın günü */}
           <div className="flex items-center gap-4 select-none shrink-0">
             <div>
@@ -157,17 +157,10 @@ export function KioskLayout({
             </div>
           </div>
 
-          {/* Kapak görseli: boşluğa ortalanır (foto + suluboya editoryal kompozisyon) */}
+          {/* Kapak görseli: suluboya illüstrasyon, kenarları zemine karışır (çerçevesiz) */}
           <div className="flex-1 min-w-0 flex items-center justify-center">
             {db.settings.bandImage ? (
-              <div className="h-[92px] w-full max-w-[300px] rounded-2xl overflow-hidden ring-1 ring-white/70 shadow-md">
-                <BandCover
-                  src={db.settings.bandImage}
-                  caption={db.settings.bandCaption || ''}
-                  artwork={db.settings.bandArtwork !== false}
-                  className="w-full h-full"
-                />
-              </div>
+              <BandCover src={db.settings.bandImage} className="h-[104px] w-full max-w-[340px]" />
             ) : null}
           </div>
 

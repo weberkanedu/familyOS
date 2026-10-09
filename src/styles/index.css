@@ -372,8 +372,19 @@ svg {
   -webkit-mask-image: radial-gradient(115% 115% at 50% 45%, #000 48%, rgba(0, 0, 0, 0.55) 72%, transparent 100%);
   mask-image: radial-gradient(115% 115% at 50% 45%, #000 48%, rgba(0, 0, 0, 0.55) 72%, transparent 100%);
 }
+
+/* Kapak: kenarları zemine karışan, çerçevesiz suluboya görsel */
+.watercolor-cover {
+  filter: url('#watercolor') saturate(0.78) contrast(0.94) brightness(1.06);
+  mix-blend-mode: multiply;
+  /* Kenarlar yumuşakça erir → zeminle uyum, çerçeve yok */
+  -webkit-mask-image: radial-gradient(118% 128% at 50% 50%, #000 62%, rgba(0, 0, 0, 0.75) 84%, transparent 100%);
+  mask-image: radial-gradient(118% 128% at 50% 50%, #000 62%, rgba(0, 0, 0, 0.75) 84%, transparent 100%);
+}
+
 /* Filtre desteklenmeyen tarayıcılar için yumuşak yedek */
 @supports not (filter: url('#watercolor')) {
   .watercolor-img { filter: saturate(0.85) contrast(0.95); }
+  .watercolor-cover { filter: saturate(0.85) contrast(0.95) brightness(1.04); }
 }
 

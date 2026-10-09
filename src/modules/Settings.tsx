@@ -351,16 +351,11 @@ export function Settings({ db, kiosk, sync }: { db: DB; kiosk: boolean; sync: { 
       <Section title="Üst Bant Kapak Görseli" icon={<ImageIcon className="w-5 h-5 text-sky-500" />}>
         <div className="flex items-center gap-4 flex-wrap">
           {s.bandImage ? (
-            <div className="w-44 h-[92px] rounded-2xl overflow-hidden ring-1 ring-white/70 shadow">
-              <BandCover
-                src={s.bandImage}
-                caption={s.bandCaption || ''}
-                artwork={s.bandArtwork !== false}
-                className="w-full h-full"
-              />
+            <div className="w-56 h-[104px]">
+              <BandCover src={s.bandImage} className="w-full h-full" />
             </div>
           ) : (
-            <div className="w-44 h-[92px] rounded-2xl bg-white/60 border border-dashed border-slate-300 grid place-items-center text-slate-300">
+            <div className="w-56 h-[104px] rounded-2xl bg-white/60 border border-dashed border-slate-300 grid place-items-center text-slate-300">
               <ImageIcon className="w-8 h-8" />
             </div>
           )}
@@ -384,37 +379,19 @@ export function Settings({ db, kiosk, sync }: { db: DB; kiosk: boolean; sync: { 
           </div>
         </div>
 
-        {/* Kompozisyon ayarları */}
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <div className="font-semibold text-slate-700">Foto + suluboya kompozisyonu</div>
-            <div className="text-xs text-slate-400">
-              Üstte fotoğraf, altta aynı sahnenin suluboya hâli, altında altyazı
-            </div>
-          </div>
-          <Toggle
-            checked={s.bandArtwork !== false}
-            onChange={(v) => saveSettings({ bandArtwork: v })}
-            label="Suluboya kompozisyonu"
-          />
-        </div>
-
-        <Field label="Altyazı (el yazısı)">
-          <Input
-            value={s.bandCaption ?? ''}
-            placeholder="Örn. yaz günleri"
-            onChange={(e) => saveSettings({ bandCaption: e.target.value })}
-          />
-        </Field>
+        <p className="text-xs text-slate-400 font-medium">
+          Yüklediğiniz fotoğraf, üst bantta <b>suluboya illüstrasyona dönüştürülerek</b> gösterilir; kenarları
+          zemine karışır, çerçeve olmaz ve fotoğrafın tamamı görünür. Yatay (geniş) fotoğraflar en iyi
+          sonucu verir.
+        </p>
 
         {/* Hazır yapay zekâ prompt'u */}
         <details className="rounded-2xl bg-white/60 border border-white/70 p-3">
           <summary className="cursor-pointer text-sm font-extrabold text-slate-700 touch-manipulation">
-            ✨ Hazır görsel prompt'u (kopyala)
+            ✨ Hazır suluboya görsel prompt'u (kopyala)
           </summary>
           <p className="text-xs text-slate-500 font-medium mt-2 mb-2">
-            Yapay zekâ görsel oluşturucuda kullanabileceğiniz prompt. Çıkan görseli yukarıdan yükleyin;
-            uygulama onu üst bantta gösterir.
+            İsterseniz yapay zekâ görsel oluşturucuda kullanıp sonucu buradan yükleyebilirsiniz.
           </p>
           <pre className="text-[11px] leading-relaxed text-slate-600 bg-white/80 rounded-xl p-3 max-h-56 overflow-y-auto whitespace-pre-wrap font-sans">
 {ARTWORK_PROMPT}
@@ -431,11 +408,6 @@ export function Settings({ db, kiosk, sync }: { db: DB; kiosk: boolean; sync: { 
             <CopyIcon className="w-4 h-4" /> Prompt'u kopyala
           </Btn>
         </details>
-
-        <p className="text-xs text-slate-400 font-medium">
-          Yüklediğiniz fotoğrafın üst yarısı foto, alt yarısı suluboya illüstrasyonu olarak gösterilir. Yatay
-          (geniş) fotoğraf daha iyi durur.
-        </p>
       </Section>
 
       <Section title="Ekran & Kiosk" icon={<MonitorIcon className="w-5 h-5 text-violet-500" />}>
