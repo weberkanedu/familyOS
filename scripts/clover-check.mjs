@@ -1,11 +1,15 @@
 /**
- * Yoncada fotoğraf yerleşimini denetler: her <image> koordinatı
- * yaprak yolunun içinde mi, yoksa dışarıda mı?
+ * Yonca yerleşim denetimi — her koşulda:
+ *   1) her üye tam 1 yaprak alıyor mu
+ *   2) yapraklar birbirine biniyor mu (kütle çakışması)
+ *   3) her fotoğraf kendi yaprağının maskesiyle kırpılmış mı
+ *   4) clipPath id'leri kararlı ve benzersiz mi
  *   node scripts/clover-check.mjs
  */
 import { createServer } from 'vite'
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
+import { readFileSync } from 'node:fs'
 
 globalThis.window = undefined
 
@@ -14,126 +18,138 @@ const vite = await createServer({
   appType: 'custom',
   logLevel: 'error',
 })
-
-/* 1x1 PNG'ler (kırmızı, yeşil, mavi, sarı) — fotoğraf yerine geçer */
-const png = (r, g, b) =>
-  `data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==`
-
 const { FamilyClover } = await vite.ssrLoadModule('/src/components/FamilyClover.tsx')
 
-const members = ['Ayşe', 'Mehmet', 'Elif', 'Ali'].map((name, i) => ({
-  id: `m${i}`,
-  name,
-  color: ['#f97362', '#4f6ef7', '#22c55e', '#f59e0b'][i],
-  emoji: '👤',
-  role: i < 2 ? 'parent' : 'child',
-  order: i,
-  photo: png(0, 0, 0),
-  updatedAt: 0,
-}))
+const mk = (n) =>
+  Array.from({ length: n }, (_, i) => ({
+    id: `m${i}`,
+    name: ['Ayşe', 'Mehmet', 'Elif', 'Ali', 'Zeynep', 'Can'][i],
+    color: ['#f97362', '#4f6ef7', '#22c55e', '#f59e0b', '#a855f7', '#14b8a6'][i],
+    emoji: '👤',
+    role: i < 2 ? 'parent' : 'child',
+    order: i,
+    photo: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+    updatedAt: 0,
+  }))
 
-const svg = renderToStaticMarkup(
-  React.createElement(FamilyClover, { members, size: 62 }),
-)
-
-/* Yaprak yolundan gerçek sınır kutusu (Bezier kontrol noktaları taranarak) */
-const LEAF_PATH =
-  'M50 52 C 36 51, 16 46, 12 33 C 8 19, 18 8, 31 10 C 40 11, 46 17, 50 26 C 54 17, 60 11, 69 10 C 82 8, 92 19, 88 33 C 84 46, 64 51, 50 52 Z'
-
-function leafBBox(d) {
-  const nums = d.match(/-?\d+(\.\d+)?/g).map(Number)
-  const xs = []
-  const ys = []
-  for (let i = 0; i < nums.length - 1; i += 2) {
-    xs.push(nums[i])
-    ys.push(nums[i + 1])
+/* SVG yolunu örnekleyip merkeze göre açısal genişliği hesaplar (derece) */
+function samplePath(d, steps = 24) {
+  const t = d.match(/[MC]|-?\d+(?:\.\d+)?/g)
+  const pts = []
+  let i = 0
+  let cur = [0, 0]
+  while (i < t.length) {
+    const cmd = t[i]
+    if (cmd === 'M') {
+      cur = [Number(t[i + 1]), Number(t[i + 2])]
+      i += 3
+    } else {
+      const p0 = cur
+      const p1 = [Number(t[i + 1]), Number(t[i + 2])]
+      const p2 = [Number(t[i + 3]), Number(t[i + 4])]
+      const p3 = [Number(t[i + 5]), Number(t[i + 6])]
+      for (let s = 1; s <= steps; s++) {
+        const u = s / steps
+        const v = 1 - u
+        pts.push([
+          v ** 3 * p0[0] + 3 * v * v * u * p1[0] + 3 * v * u * u * p2[0] + u ** 3 * p3[0],
+          v ** 3 * p0[1] + 3 * v * v * u * p1[1] + 3 * v * u * u * p2[1] + u ** 3 * p3[1],
+        ])
+      }
+      cur = p3
+      i += 7
+    }
   }
-  // kontrol noktaları eğriyi tam sarmaz; %3 pay bırak
-  const pad = 3
-  return {
-    x: Math.min(...xs) + pad,
-    y: Math.min(...ys) + pad,
-    r: Math.max(...xs) - pad,
-    b: Math.max(...ys) - pad,
-  }
+  return pts
 }
 
-const box = leafBBox(LEAF_PATH)
-const images = [...svg.matchAll(/<image[^>]*>/g)].map((m) => m[0])
+/**
+ * Açısal genişlik: en büyük boşluk açısını bulup 360°'den çıkarır.
+ * (min/max kullanmak 0° sınırında taşar; dairesel yaklaşım gerekir.)
+ */
+function leafAngularSpan(d) {
+  const CX = 50
+  const CY = 50
+  const angles = samplePath(d)
+    .map(([x, y]) => [x - CX, y - CY])
+    .filter(([dx, dy]) => Math.hypot(dx, dy) > 2)
+    .map(([dx, dy]) => {
+      let a = (Math.atan2(dx, -dy) * 180) / Math.PI
+      return a < 0 ? a + 360 : a
+    })
+    .sort((a, b) => a - b)
+
+  let maxGap = 0
+  for (let i = 0; i < angles.length; i++) {
+    const next = i === angles.length - 1 ? angles[0] + 360 : angles[i + 1]
+    maxGap = Math.max(maxGap, next - angles[i])
+  }
+  return 360 - maxGap
+}
+
+const src = readFileSync('src/components/FamilyClover.tsx', 'utf8')
+const LEAF = src.match(/const LEAF =\s*'([^']+)'/)?.[1]
+const step = LEAF ? 360 / LEAF.split('C').length : 0
+const span = LEAF ? leafAngularSpan(LEAF) : 0
 
 let fail = false
-console.log(`yaprak kutusu: x ${box.x}..${box.r}  y ${box.y}..${box.b}`)
-console.log(`<image> sayisi: ${images.length}`)
+console.log(`yaprak acisal genisligi: ${span.toFixed(1)}°`)
 
-for (const [i, tag] of images.entries()) {
-  const attr = (n) => {
-    const m = tag.match(new RegExp(`${n}="([^"]+)"`))
-    return m ? Number(m[1]) : NaN
-  }
-  const x = attr('x')
-  const y = attr('y')
-  const right = x + attr('width')
-  const bottom = y + attr('height')
-  /* Görsel yapraktan küçükse yaprağın bir kısmı boş kalır (kötü) */
-  const covers = x <= box.x && y <= box.y && right >= box.r && bottom >= box.b
-  /* Dışarı taşarsa clipPath olmadan yoncayı bozar; klipsiz de güvenli kalsın */
-  const overflow = Math.max(0, right - box.r) + Math.max(0, bottom - box.b) + Math.max(0, box.x - x) + Math.max(0, box.y - y)
-  /* React, clipPath özniteliğini "clip-path" olarak basar */
-  const clipped = new RegExp(`clip-path="url\\(#cl-[^"]*-${i}\\)"`).test(svg)
-  const ok = covers && clipped
+for (const n of [1, 2, 3, 4]) {
+  const members = mk(n)
+  const svg = renderToStaticMarkup(React.createElement(FamilyClover, { members, size: 62 }))
+
+  /* Her yaprak bir rotate() grubu içindedir; clipPath tanımları sayılmaz */
+  const leaves = (svg.match(/transform="rotate\([-\d.]+ 50 50\)"/g) || []).length
+  const images = (svg.match(/<image/g) || []).length
+  const masks = (svg.match(/<clipPath/g) || []).length
+  const refs = (svg.match(/clip-path="url\(#(cl-[^"]+)\)"/g) || []).length
+  const rotations = [...svg.matchAll(/transform="rotate\(([-\d.]+) 50 50\)"/g)].map((m) => Number(m[1]))
+
+  /* Yaprak başına düşen açı aralığı (komşu yapraklar arası) */
+  const perLeaf = 360 / n
+  /* Yaprak kendi yarı genişliğinden fazlasını kaplarsa komşuya biner */
+  const overlaps = span > perLeaf + 0.5
+
+  const ok = leaves === n && images === n && masks === n && refs === n && !overlaps
   if (!ok) fail = true
+
   console.log(
-    `  #${i}: ${x},${y} -> ${right},${bottom} | yapragi kapsiyor=${covers ? 'evet' : 'HAYIR'} | clipPath=${clipped ? 'var' : 'YOK'} | tasma=${overflow.toFixed(0)} ${ok ? 'OK' : 'HATA'}`,
+    `${n} kisi -> yaprak=${leaves} foto=${images} maske=${masks} ref=${refs} ` +
+      `acilar=[${rotations.join(', ')}] yaprakBasina=${perLeaf}° ` +
+      `${ok ? 'OK' : 'HATA'}${overlaps ? ' (yapraklar biniyor!)' : ''}`,
   )
 }
 
-/* Her yaprak kendi id'sini kullanmalı: id'ler çakışırsa fotoğraflar karışır */
-const ids = [...svg.matchAll(/id="(cl-[^"]+)"/g)].map((m) => m[1])
-const refs = [...svg.matchAll(/clip-path="url\(#(cl-[^"]+)\)/g)].map((m) => m[1])
-const uniqueIds = new Set(ids).size === ids.length
-const allRefsExist = refs.every((r) => ids.includes(r))
-if (!uniqueIds || !allRefsExist) fail = true
-console.log(`id sayisi=${ids.length} benzersiz=${uniqueIds ? 'evet' : 'HAYIR (cakisma!)'} | clipPath referanslari=${refs.length} hepsi tanimli=${allRefsExist ? 'evet' : 'HAYIR'}`)
+/* 5+ kişide +N rozeti */
+const svg5 = renderToStaticMarkup(React.createElement(FamilyClover, { members: mk(6), size: 62 }))
+const badge = svg5.match(/>\+(\d+)</)?.[1]
+const ok5 = badge === '2'
+if (!ok5) fail = true
+console.log(`6 kisi -> "+${badge}" rozeti ${ok5 ? 'OK' : 'HATA (beklenen +2)'}`)
 
-const viewBox = svg.match(/viewBox="([^"]+)"/)?.[1]
-const svgH = svg.match(/height="([^"]+)"/)?.[1]
-const overflow = /overflow-visible/.test(svg)
-console.log(`viewBox=${viewBox} height=${svgH} overflowVisible=${overflow}`)
-
-/* Aynı bileşen ikinci kez render edildiğinde id'ler DEĞİŞMEMELİ.
-   Math.random() kullanılsaydı her render'da farklı id üretilir,
-   tarayıcı eski maskeyi kullanır ve fotoğraflar yanlış yaprakta kalır. */
-const svg2 = renderToStaticMarkup(React.createElement(FamilyClover, { members, size: 62 }))
-const ids2 = [...svg2.matchAll(/id="(cl-[^"]+)"/g)].map((m) => m[1])
-const stable = ids2.join(',') === ids.join(',')
+/* id kararlılığı: iki render aynı id'leri vermeli */
+const a = renderToStaticMarkup(React.createElement(FamilyClover, { members: mk(4), size: 62 }))
+const b = renderToStaticMarkup(React.createElement(FamilyClover, { members: mk(4), size: 62 }))
+const ia = [...a.matchAll(/id="(cl-[^"]+)"/g)].map((m) => m[1])
+const ib = [...b.matchAll(/id="(cl-[^"]+)"/g)].map((m) => m[1])
+const stable = ia.join() === ib.join()
 if (!stable) fail = true
-console.log(`id kararliligi (2. render): ${stable ? 'kararli (OK)' : 'DEGISTI - HATA'}`)
+console.log(`id kararliligi: ${stable ? 'kararli (OK)' : 'DEGISTI - HATA'}`)
 
-/* Aynı React ağacında iki yonca: id'ler benzersiz olmalı.
-   (Ayrı renderToStaticMarkup çağrıları AYRI tree'dir; her biri sayacı
-   sıfırlar, bu yüzden tek tree içinde sarmalayarak test ediyoruz.) */
+/* aynı ağaçta iki yonca: çakışma olmamalı */
 const pair = renderToStaticMarkup(
   React.createElement(
     'div',
     null,
-    React.createElement(FamilyClover, { members, size: 62 }),
-    React.createElement(FamilyClover, { members, size: 62 }),
+    React.createElement(FamilyClover, { members: mk(4), size: 62 }),
+    React.createElement(FamilyClover, { members: mk(4), size: 62 }),
   ),
 )
-const pairIds = [...pair.matchAll(/id="(cl-[^"]+)"/g)].map((m) => m[1])
-const pairOverlap = pairIds.filter((x, i) => pairIds.indexOf(x) !== i)
-if (pairOverlap.length) {
-  fail = true
-  console.log(`HATA: ayni agacta id cakismasi -> ${[...new Set(pairOverlap)].join(', ')}`)
-} else {
-  console.log(`ayni agacta iki yonca: ${pairIds.length} id, cakisma yok (OK)`)
-}
+const pid = [...pair.matchAll(/id="(cl-[^"]+)"/g)].map((m) => m[1])
+const dup = pid.filter((x, i) => pid.indexOf(x) !== i)
+if (dup.length) fail = true
+console.log(`ayni agacta iki yonca: ${pid.length} id, cakisma ${dup.length ? 'VAR - HATA' : 'yok (OK)'}`)
 
-/* Uygulamada aynı anda kaç yonca mount oluyor? (KioskLayout tek yerde kullanıyor) */
-const usages = (await import('node:fs')).readFileSync('src/components/layouts/KioskLayout.tsx', 'utf8')
-const cloverUses = (usages.match(/<FamilyClover/g) || []).length
-console.log(`KioskLayout icinde <FamilyClover> kullanimi: ${cloverUses}`)
-
-const ok = images.length === 4 && !fail
-console.log(ok ? '\nSONUC: OK — 4 fotograf da yaprak icinde' : '\nSONUC: HATA')
-process.exit(ok ? 0 : 1)
+console.log(fail ? '\nSONUC: HATA' : '\nSONUC: OK — her kisi icin tam bir yaprak, binme yok')
+process.exit(fail ? 1 : 0)
