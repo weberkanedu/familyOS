@@ -1,0 +1,29 @@
+name = "familyos"
+main = "worker/src/index.ts"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Statik uygulama (vite build çıktısı) worker ile aynı serviste
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = ["/sync", "/push/subscribe", "/push/unsubscribe", "/health"]
+
+# Sürekli depolama (soğuk başlatmada aile verisi)
+[[d1_databases]]
+binding = "DB"
+database_name = "familyos"
+database_id = "BURAYA_D1_ID_GELECEK"   # wrangler d1 create familyos
+
+# Gerçek zamanlı oda (WebSocket)
+[[durable_objects.bindings]]
+name = "ROOM"
+class_name = "FamilyRoom"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["FamilyRoom"]
+
+[observability]
+enabled = true

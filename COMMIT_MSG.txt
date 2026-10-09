@@ -1,0 +1,24 @@
+feat: FamilyOS - aile takvimi, ev panosu, kiosk/PWA (realtime senkron)
+
+Uygulama
+- Vite + React 18 + TypeScript + Tailwind (eski Android icin ES5 legacy cikti)
+- Cloudflare Worker + Durable Object + D1 ile WebSocket realtime senkron (op tabanli, LWW)
+- Yerel LAN relay (ws) ve localStorage modu fallback; PWA + service worker + Web Push
+
+Moduller
+- Takvim (gun/hafta/ay), Gorevler (yinelenen), Alisveris (kategorili)
+- Yemek plani + "Ne Pisirsem?" oner motoru (kutuphane + TheMealDB'den gercek tarif/fotograf)
+- Cocuk Beslenme (haftalik serbest menu) ve Ders Programi (yatay 7 sutun) popup'lar
+- Ogrenme: Quiz (JSON import) + Anki tarzi aralikli tekrar (SM-2)
+- Hava durumu: Open-Meteo, sabit ev konumu + kayitli sehirler, kaydirarak sehir degisimi,
+  kosul renkli haplar, tiklaninca buyuyen gun karti
+- Mesajlasma: anlik not, ses+titresim+overlay, ekran koruyucu kelime kartlari
+
+Gorunum
+- 6 renk temasi (CSS degiskeni, aninda uygulanir), gizlenebilir sol menu
+- Glassmorphism + mesh arka plan, suluboya seyahat-art kapak gorseli (Caveat el yazisi)
+- Phosphor ikon seti, Montserrat + Righteous + Caveat fontlari (kendi sunucumuzda)
+
+Diger
+- Aile/uye fotograf yukleme (boyut siniri yok), aile yoncasi
+- Testler: typecheck, worker typecheck, render/senkron/konum/yemek/crud

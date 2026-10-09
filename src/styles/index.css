@@ -1,0 +1,379 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   Montserrat (kendi sunucumuzdan — internet gerektirmez)
+   ============================================================ */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/montserrat-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/montserrat-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Righteous — başlıklar / ana ekran (dekoratif, ücretsiz) */
+@font-face {
+  font-family: 'Righteous';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/righteous-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Righteous';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/righteous-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* ============================================================
+   Tema değişkenleri (Ayarlar → Görünüm)
+   ============================================================ */
+:root,
+[data-theme='classic'] {
+  --brand-50: 238 244 255;
+  --brand-100: 219 230 255;
+  --brand-400: 109 141 255;
+  --brand-500: 79 110 247;
+  --brand-600: 59 86 224;
+  --bg-base: #e9eeff;
+  --mesh-1: rgba(147, 197, 253, 0.85);
+  --mesh-2: rgba(253, 205, 211, 0.8);
+  --mesh-3: rgba(196, 181, 253, 0.75);
+  --mesh-4: rgba(167, 243, 208, 0.65);
+}
+[data-theme='ocean'] {
+  --brand-50: 236 254 255;
+  --brand-100: 207 250 254;
+  --brand-400: 38 198 218;
+  --brand-500: 14 165 233;
+  --brand-600: 2 132 199;
+  --bg-base: #e6f7fb;
+  --mesh-1: rgba(125, 211, 252, 0.85);
+  --mesh-2: rgba(94, 234, 212, 0.75);
+  --mesh-3: rgba(59, 130, 246, 0.7);
+  --mesh-4: rgba(186, 230, 253, 0.8);
+}
+[data-theme='sunset'] {
+  --brand-50: 255 247 237;
+  --brand-100: 254 226 205;
+  --brand-400: 251 146 60;
+  --brand-500: 249 115 22;
+  --brand-600: 234 88 12;
+  --bg-base: #fff4ec;
+  --mesh-1: rgba(253, 186, 116, 0.85);
+  --mesh-2: rgba(251, 113, 133, 0.7);
+  --mesh-3: rgba(252, 211, 77, 0.7);
+  --mesh-4: rgba(254, 215, 170, 0.8);
+}
+[data-theme='forest'] {
+  --brand-50: 240 253 244;
+  --brand-100: 220 252 231;
+  --brand-400: 74 222 128;
+  --brand-500: 22 163 74;
+  --brand-600: 21 128 61;
+  --bg-base: #eefaf1;
+  --mesh-1: rgba(134, 239, 172, 0.8);
+  --mesh-2: rgba(190, 242, 100, 0.65);
+  --mesh-3: rgba(167, 243, 208, 0.85);
+  --mesh-4: rgba(253, 224, 71, 0.5);
+}
+[data-theme='grape'] {
+  --brand-50: 250 245 255;
+  --brand-100: 243 232 255;
+  --brand-400: 192 132 252;
+  --brand-500: 147 51 234;
+  --brand-600: 126 34 206;
+  --bg-base: #f7f0ff;
+  --mesh-1: rgba(216, 180, 254, 0.8);
+  --mesh-2: rgba(240, 171, 252, 0.7);
+  --mesh-3: rgba(199, 210, 254, 0.8);
+  --mesh-4: rgba(251, 207, 232, 0.7);
+}
+[data-theme='graphite'] {
+  --brand-50: 241 245 249;
+  --brand-100: 226 232 240;
+  --brand-400: 148 163 184;
+  --brand-500: 71 85 105;
+  --brand-600: 51 65 85;
+  --bg-base: #eef1f5;
+  --mesh-1: rgba(203, 213, 225, 0.9);
+  --mesh-2: rgba(226, 232, 240, 0.9);
+  --mesh-3: rgba(214, 219, 228, 0.85);
+  --mesh-4: rgba(241, 245, 249, 0.95);
+}
+
+/* Caveat — zarif el yazısı (kartpostal altyazısı) */
+@font-face {
+  font-family: 'Caveat';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/caveat-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Caveat';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/caveat-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: theme('fontFamily.sans');
+  background: theme('colors.slate.100');
+  color: theme('colors.slate.900');
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+button,
+input,
+select,
+textarea,
+a {
+  touch-action: manipulation;
+}
+
+img,
+svg {
+  max-width: 100%;
+}
+
+/* Kiosk kaydırma çubuğu */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.35);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================================
+   Hava durumu sahnesi animasyonları
+   ============================================================ */
+@keyframes fs-sun-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.95; }
+  50% { transform: scale(1.12); opacity: 1; }
+}
+@keyframes fs-rays {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes fs-sweep {
+  0% { transform: translateX(-70%); opacity: 0; }
+  35% { opacity: 1; }
+  100% { transform: translateX(170%); opacity: 0; }
+}
+@keyframes fs-drift {
+  0% { transform: translateX(-25%) scale(1); }
+  50% { transform: translateX(10%) scale(1.08); }
+  100% { transform: translateX(135%) scale(1); }
+}
+@keyframes fs-drift-rev {
+  0% { transform: translateX(135%) scale(1); }
+  50% { transform: translateX(10%) scale(1.08); }
+  100% { transform: translateX(-25%) scale(1); }
+}
+@keyframes fs-rain {
+  0% { transform: translate3d(0, -30%, 0); }
+  100% { transform: translate3d(-16px, 460%, 0); }
+}
+@keyframes fs-snow {
+  0% { transform: translate3d(0, -20%, 0) rotate(0deg); }
+  50% { transform: translate3d(18px, 55%, 0) rotate(180deg); }
+  100% { transform: translate3d(-12px, 130%, 0) rotate(360deg); }
+}
+@keyframes fs-flash {
+  0%, 88%, 100% { opacity: 0; }
+  90% { opacity: 0.85; }
+  91.5% { opacity: 0; }
+  93% { opacity: 0.55; }
+  95% { opacity: 0; }
+}
+@keyframes fs-fog {
+  0%, 100% { transform: translateX(-5%); opacity: 0.45; }
+  50% { transform: translateX(5%); opacity: 0.75; }
+}
+@keyframes fs-twinkle {
+  0%, 100% { opacity: 0.15; transform: scale(0.7); }
+  50% { opacity: 1; transform: scale(1.5); }
+}
+@keyframes fs-grow {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+@keyframes fs-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+@keyframes fs-drop {
+  0% { opacity: 0; transform: translateY(-4px); }
+  30% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(12px); }
+}
+@keyframes fs-dropy {
+  0%, 100% { opacity: 0.25; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(7px); }
+}
+@keyframes fs-flash-sm {
+  0%, 55%, 100% { opacity: 0.35; }
+  60%, 70% { opacity: 1; }
+}
+@keyframes fs-slide {
+  from { transform: translateX(-3px); opacity: 0.55; }
+  to { transform: translateX(3px); opacity: 1; }
+}
+@keyframes fs-drift-small {
+  from { transform: translateX(-2px); }
+  to { transform: translateX(2px); }
+}
+
+/* Sahne değişiminde yumuşak geçiş */
+.fs-scene {
+  transition: background 700ms ease, opacity 700ms ease;
+}
+
+/* ============================================================
+   Kart giriş animasyonu
+   ============================================================ */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(14px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+.anim-rise {
+  animation: rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+.anim-pulse-soft { animation: pulse-soft 2.4s ease-in-out infinite; }
+
+@keyframes shimmer {
+  0% { background-position: -300px 0; }
+  100% { background-position: 300px 0; }
+}
+.shimmer {
+  background-image: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.35) 50%, rgba(255,255,255,0) 100%);
+  background-size: 600px 100%;
+  animation: shimmer 2.2s linear infinite;
+}
+
+.hover-lift { transition: transform 0.18s ease, box-shadow 0.18s ease; }
+.hover-lift:hover { transform: translateY(-2px); box-shadow: 0 10px 30px -14px rgba(15, 23, 42, 0.35); }
+
+/* ============================================================
+   Glassmorphism yüzeyler
+   ============================================================ */
+.glass-strong {
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow:
+    0 16px 44px -26px rgba(30, 41, 59, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+.glass-soft {
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow:
+    0 8px 22px -18px rgba(30, 41, 59, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+/* Eski tarayıcılarda backdrop-filter yoksa okunabilirlik */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-strong { background: rgba(255, 255, 255, 0.82); }
+  .glass-soft { background: rgba(255, 255, 255, 0.9); }
+}
+
+/* ============================================================
+   Mesh arka plan (tema renkleriyle)
+   ============================================================ */
+.mesh-bg,
+.kiosk-bg {
+  background-color: var(--bg-base, #e9eeff);
+  background-image:
+    radial-gradient(40rem 28rem at 6% -8%, var(--mesh-1), transparent 62%),
+    radial-gradient(34rem 26rem at 98% 2%, var(--mesh-2), transparent 62%),
+    radial-gradient(42rem 30rem at 72% 106%, var(--mesh-3), transparent 62%),
+    radial-gradient(32rem 24rem at 18% 98%, var(--mesh-4), transparent 62%);
+  background-attachment: fixed;
+  transition: background-color 0.4s ease;
+}
+
+/* ============================================================
+   Suluboya kapak efekti (üst bant görseli)
+   ============================================================ */
+.watercolor-img {
+  filter: url('#watercolor');
+  mix-blend-mode: multiply;
+  opacity: 0.94;
+  transform: scale(1.04);
+  -webkit-mask-image: radial-gradient(115% 115% at 50% 45%, #000 48%, rgba(0, 0, 0, 0.55) 72%, transparent 100%);
+  mask-image: radial-gradient(115% 115% at 50% 45%, #000 48%, rgba(0, 0, 0, 0.55) 72%, transparent 100%);
+}
+/* Filtre desteklenmeyen tarayıcılar için yumuşak yedek */
+@supports not (filter: url('#watercolor')) {
+  .watercolor-img { filter: saturate(0.85) contrast(0.95); }
+}
+

@@ -1,0 +1,209 @@
+import { CalendarHeartIcon, CaretRightIcon, CaretDoubleLeftIcon } from '@phosphor-icons/react'
+import type { ReactNode } from 'react'
+import { NAV } from '../nav'
+import { Avatar, cx } from '../ui'
+import type { SyncStatus } from '../../sync/useFamilySync'
+import { syncLabel } from '../../sync/useFamilySync'
+import { useClock, useIdle } from '../../lib/hooks'
+import { fmtDayName, fmtMonth, dayOfYear, pad } from '../../lib/time'
+import { HOME } from '../../lib/location'
+import { themeById } from '../../lib/themes'
+import { saveSettings } from '../../state/actions'
+import { WeatherWidget, type WeatherWidgetProps } from '../WeatherWidget'
+import { FamilyClover } from '../FamilyClover'
+import { BandCover } from '../BandCover'
+import type { DB, SavedLocation } from '../../types'
+import type { TabKey } from '../../state/store'
+import { IdleScreen, MessageFlash } from '../IdleScreen'
+import type { Message } from '../../types'
+
+const SYNC_TONE: Record<SyncStatus, string> = {
+  live: 'bg-emerald-500',
+  connecting: 'bg-amber-400 animate-pulse',
+  reconnecting: 'bg-amber-400 animate-pulse',
+  local: 'bg-sky-400',
+}
+
+/** Duvar/tablet Kiosk modu: geniş, büyük tipografi, dokunmatik dostu. */
+export function KioskLayout({
+  db,
+  tab,
+  onTab,
+  status,
+  weather,
+  flash,
+  onFlashDismiss,
+  children,
+}: {
+  db: DB
+  tab: TabKey
+  onTab: (t: TabKey) => void
+  status: SyncStatus
+  weather: WeatherWidgetProps
+  flash: Message | null
+  onFlashDismiss: () => void
+  children: ReactNode
+}) {
+  const now = useClock(1000)
+  const { idle, wake } = useIdle(db.settings.idleMinutes)
+  const collapsed = !!db.settings.navCollapsed
+  const toggleNav = () => saveSettings({ navCollapsed: !collapsed })
+  const theme = themeById(db.settings.theme)
+
+  return (
+    <div className="h-screen flex overflow-hidden kiosk-bg text-slate-900" data-theme={theme.id}>
+      {/* Sol navigasyon rayı */}
+      <aside
+        className={cx(
+          'relative shrink-0 bg-ink-950/90 backdrop-blur-xl text-white flex flex-col py-5 gap-1.5 border-r border-white/10 transition-all duration-300',
+          collapsed ? 'w-[68px]' : 'w-32 xl:w-40',
+        )}
+      >
+        {/* Kenar tutamacı: şerit halinde, dikeyde ortalanmış */}
+        <button
+          type="button"
+          onClick={toggleNav}
+          className="absolute z-40 top-1/2 -translate-y-1/2 -right-[11px] w-[22px] h-16 rounded-full bg-white/80 hover:bg-white text-ink-900 shadow-lg ring-1 ring-black/5 grid place-items-center touch-manipulation transition-transform hover:scale-105 active:scale-95"
+          aria-label={collapsed ? 'Menüyü aç' : 'Menüyü gizle'}
+          title={collapsed ? 'Menüyü aç' : 'Menüyü gizle'}
+        >
+          {collapsed ? <CaretRightIcon className="w-3.5 h-3.5" weight="bold" /> : <CaretDoubleLeftIcon className="w-3.5 h-3.5" weight="bold" />}
+        </button>
+
+        {/* Marka alanı: fotoğraf varsa tüm alanı kaplar */}
+        {db.settings.familyPhoto ? (
+          <div className={cx('px-3 pb-3 mb-1 border-b border-white/10', collapsed && 'px-2')}>
+            <img
+              src={db.settings.familyPhoto}
+              alt={db.settings.brandName || 'Aile'}
+              className={cx(
+                'w-full object-cover object-center rounded-2xl ring-2 ring-brand-400/50 shadow-lg',
+                collapsed ? 'h-14' : 'h-24',
+              )}
+            />
+          </div>
+        ) : (
+          <div className={cx('px-4 pb-4 mb-2 border-b border-white/10', collapsed && 'px-2')}>
+            <div className={cx('flex items-center gap-2.5', collapsed && 'justify-center')}>
+              <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-600 grid place-items-center shrink-0 shadow-lg">
+                <CalendarHeartIcon className="w-6 h-6 text-white" weight="duotone" />
+              </div>
+              {!collapsed && (
+                <div className="leading-tight min-w-0">
+                  <div className="font-display text-[17px] leading-tight truncate">{db.settings.brandName || 'İÇİL Ailesi'}</div>
+                  <div className="text-[11px] text-white/60 truncate">{db.settings.city || HOME.city}</div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        <nav className="flex-1 flex flex-col gap-1.5 px-2 overflow-y-auto">
+          {NAV.map((n) => {
+            const active = tab === n.key
+            const Icon = n.icon
+            return (
+              <button
+                key={n.key}
+                type="button"
+                onClick={() => onTab(n.key)}
+                title={n.label}
+                className={cx(
+                  'rounded-2xl transition-colors touch-manipulation',
+                  collapsed ? 'h-12 grid place-items-center' : 'flex flex-col items-center justify-center gap-1 py-3.5',
+                  active ? 'bg-brand-500 text-white shadow-lg' : 'text-white/70 hover:bg-white/10',
+                )}
+              >
+                <Icon weight={active ? 'duotone' : 'regular'} className="w-7 h-7" />
+                {!collapsed && <span className="text-[13px] font-bold">{n.label}</span>}
+              </button>
+            )
+          })}
+        </nav>
+
+        {/* Aile yoncası + senkron durumu */}
+        <div className={cx('px-3 pt-3 mt-2 border-t border-white/10 flex flex-col items-center gap-2', collapsed && 'px-2')}>
+          <FamilyClover members={db.members} size={collapsed ? 44 : 54} />
+          {!collapsed && (
+            <div className="flex items-center justify-center gap-1.5 text-[11px] font-bold text-white/70">
+              <span className={cx('w-2 h-2 rounded-full', SYNC_TONE[status])} />
+              <span className="truncate">{syncLabel(status)}</span>
+            </div>
+          )}
+        </div>
+      </aside>
+
+      {/* İçerik */}
+      <div className="flex-1 flex flex-col min-w-0">
+        <header className="shrink-0 bg-white/45 backdrop-blur-xl border-b border-white/60 px-6 py-3.5 flex items-center gap-6">
+          {/* Tarih: solda gün/ay + haftanın günü, sağda yıl + yılın günü */}
+          <div className="flex items-center gap-4 select-none shrink-0">
+            <div>
+              <div className="text-[32px] font-extrabold text-slate-900 leading-none tracking-tight whitespace-nowrap">
+                {now.getDate()} {fmtMonth(now)}
+              </div>
+              <div className="text-[22px] font-extrabold text-brand-500 leading-none mt-1.5">
+                {fmtDayName(now)}
+              </div>
+            </div>
+            <div className="h-14 w-px bg-slate-300/60" />
+            <div>
+              <div className="text-[32px] font-extrabold leading-none tracking-tight bg-gradient-to-b from-slate-400 via-slate-300 to-slate-100 bg-clip-text text-transparent">
+                {now.getFullYear()}
+              </div>
+              <div className="text-[12px] font-bold text-slate-400 leading-none mt-2 whitespace-nowrap">
+                Yılın {dayOfYear(now)}. günü
+              </div>
+            </div>
+          </div>
+
+          {/* Kapak görseli: boşluğa ortalanır (foto + suluboya editoryal kompozisyon) */}
+          <div className="flex-1 min-w-0 flex items-center justify-center">
+            {db.settings.bandImage ? (
+              <div className="h-[92px] w-full max-w-[300px] rounded-2xl overflow-hidden ring-1 ring-white/70 shadow-md">
+                <BandCover
+                  src={db.settings.bandImage}
+                  caption={db.settings.bandCaption || ''}
+                  artwork={db.settings.bandArtwork !== false}
+                  className="w-full h-full"
+                />
+              </div>
+            ) : null}
+          </div>
+
+          {/* Hava: yatay widget (solda bugün, sağda 5 gün, kaydır: şehir değişir) */}
+          <div className="shrink-0">
+            <WeatherWidget {...weather} compact />
+          </div>
+
+          {/* Saat (sağ üst) */}
+          <div className="flex items-center gap-4 shrink-0">
+            <div className="h-12 w-px bg-slate-300/60" />
+            <div className="flex items-end leading-none">
+              <span className="text-[42px] font-extrabold text-slate-900 tabular-nums tracking-tight">
+                {pad(now.getHours())}:{pad(now.getMinutes())}
+              </span>
+              <span className="text-lg font-bold text-slate-400 tabular-nums mb-1 ml-0.5">
+                {pad(now.getSeconds())}
+              </span>
+            </div>
+          </div>
+        </header>
+
+        <main key={tab} className="flex-1 overflow-y-auto p-6 xl:p-8">{children}</main>
+      </div>
+
+      {flash && <MessageFlash message={flash} member={db.members.find((m) => m.id === flash.fromId)} onDismiss={onFlashDismiss} />}
+      {idle && (
+        <IdleScreen
+          weather={weather.data}
+          city={db.settings.city || HOME.city}
+          messages={db.messages}
+          members={db.members}
+          words={db.words}
+          onWake={wake}
+        />
+      )}
+    </div>
+  )
+}

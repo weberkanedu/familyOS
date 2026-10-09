@@ -1,0 +1,46 @@
+{
+  "name": "familyos",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "FamilyOS - Aile takvimi, ev panosu ve kiosk/PWA aile işletim sistemi",
+  "scripts": {
+    "dev": "vite",
+    "dev:sync": "node server/dev-sync.mjs",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "typecheck:worker": "tsc -p worker/tsconfig.json --noEmit",
+    "test:smoke": "node scripts/render-smoke.mjs && node scripts/sync-smoke-test.mjs",
+    "test:meals": "node scripts/meal-smoke.mjs",
+    "test:location": "node scripts/location-smoke.mjs",
+    "test:crud": "node scripts/crud-smoke.mjs",
+    "icons": "node scripts/generate-icons.mjs",
+    "cf:deploy": "npm run build && wrangler deploy",
+    "cf:db:init": "wrangler d1 execute familyos --remote --file=./worker/schema.sql",
+    "cf:db:local": "wrangler d1 execute familyos --local --file=./worker/schema.sql"
+  },
+  "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
+    "lucide-react": "^0.469.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261006.1",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@types/web-push": "^3.6.4",
+    "@types/ws": "^8.5.13",
+    "@vitejs/plugin-legacy": "^6.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.7",
+    "web-push": "^3.6.7",
+    "wrangler": "^4.149.0",
+    "ws": "^8.18.0"
+  }
+}
