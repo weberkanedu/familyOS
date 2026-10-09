@@ -27,7 +27,61 @@ gerçek zamanlı senkronize çalışan, modüler ve hafif aile işletim sistemi.
 - **State:** İkili kayıt (`localStorage`) + op (operation) tabanlı senkron — son yazan kazanır
 - **Realtime:** WebSocket (`/sync`) — **Cloudflare Worker + Durable Object + D1**
   *veya* yerel relay (`ws`), *veya* yalnızca bu cihaz (localStorage + BroadcastChannel)
-- **Deploy:** Tek komutla Cloudflare'e (statik `dist` + Worker aynı serviste)
+- **Deploy:** Docker/Nginx (Dokploy, Portainer, herhangi bir host) veya Cloudflare
+
+---
+
+## 1-B. Kurulum (Dokploy + Android tablet)
+
+Program hazır. Çalıştırmak için yapmanız gereken:
+
+### Adım 1 — Dokploy'da uygulamayı yayınlayın
+
+Dokploy → **Apps** → **Create App** → **Application**
+
+| Alan | Değer |
+|------|-------|
+| Uygulama Adı | `aile-panosu` |
+| Build Type | Dockerfile |
+| Dockerfile | varsayılan (`Dockerfile` depoda) |
+| Port | `80` (container içi) |
+
+**Environment** sekmesinde (opsiyonel — senkron istiyorsanız):
+
+```
+VITE_SYNC_URL=wss://<senin-worker-adresin>/sync
+```
+
+Sonra **Deploy**'a basın. Build ~2 dakika sürer.
+
+### Adım 2 — Alan adı bağlayın
+
+Dokploy → uygulama → **Domains** → `aile-panosu.alanadresiniz.com` ekleyin.
+Dokploy Let's Encrypt sertifikasını otomatik verir.
+
+Artık uygulama `https://aile-panosu.alanadresiniz.com` adresinden açılır.
+
+### Adım 3 — Tablet'te tam ekran (kiosk) modu
+
+1. Chrome'u açın → adres çubuğuna uygulama adresini yazın
+2. Sağ üstteki **⋮ menüsü** → **"Ana ekrana ekle"** / **"Yükle"**
+   (PWA olarak kurulur, tam ekran açılır)
+3. Ana ekrandaki simgeye dokunun — tarayıcı çubuğu olmadan açılır
+4. **Tam kilit (kiosk):** Ayarlar → Güvenlik → **"Ekrandan kilitleme"** seçeneğini açın,
+   ardından uygulamayı açın. Ekran açık kalır, uygulama dışına çıkılamaz.
+
+> **İpucu:** Ekranın hiç sönmesin diye → Ayarlar → Ekran → **"Ekranı açık tut"** / *"Sleep"* → **45 dakika veya daha uzun**.
+
+### Adım 4 — Evdeki bilgisayar olmadan da çalışsın
+
+Uygulama Dokploy'da çalıştığı için bilgisayarınız kapalıyken de tablet çalışır.
+Senkron (telefon ↔ duvar) için `VITE_SYNC_URL` gerekir; boş bırakırsanız
+uygulama **yalnızca tablet üzerinde** çalışır (veriler o cihazda kalır).
+
+### Veriler nerede?
+
+Tüm veriler **tarayıcıda** (`localStorage`) tutulur — sunucuya yazılmaz.
+Cihaz değiştirirken: Ayarlar → **Dışa/içe aktarma** ile yedekleyip geri yükleyin.
 
 ---
 

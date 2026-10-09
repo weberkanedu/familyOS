@@ -9,7 +9,7 @@
   "id": "/",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone", "fullscreen"],
-  "orientation": "any",
+  "orientation": "landscape-primary",
   "background_color": "#0b1020",
   "theme_color": "#0b1020",
   "categories": ["productivity", "lifestyle", "education"],
