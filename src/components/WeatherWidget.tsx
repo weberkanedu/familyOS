@@ -68,7 +68,8 @@ export function WeatherWidget({
 }: WeatherWidgetProps) {
   const days = data?.days ?? []
   const today = days.find((d) => d.date === todayKey()) ?? days[0]
-  const future = days.filter((d) => d.date !== todayKey()).slice(0, DAY_COUNT)
+  // Gece yarısından sonra eski veride dünün kartı "gelecek" gibi görünmesin
+  const future = days.filter((d) => d.date > todayKey()).slice(0, DAY_COUNT)
   const swipe = useSwipe(locations.length, locationIndex, (i) => onLocationChange?.(i))
   const now = data?.now
   const todayStyle = now ? styleFor(now.weatherCode, now.isDay) : styleFor(2, true)
