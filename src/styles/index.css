@@ -390,7 +390,9 @@ html.night .bg-slate-200:not([data-keep-light] *) { background-color: rgba(71, 8
 html.night :is(.bg-emerald-50, .bg-emerald-50\/70):not([data-keep-light] *) { background-color: rgba(6, 95, 70, 0.35); }
 html.night .bg-amber-50:not([data-keep-light] *) { background-color: rgba(120, 53, 15, 0.35); }
 html.night .bg-rose-50:not([data-keep-light] *) { background-color: rgba(136, 19, 55, 0.35); }
-html.night .bg-brand-50:not([data-keep-light] *) { background-color: rgb(var(--brand-500) / 0.2); }
+html.night :is(.bg-brand-50, .bg-brand-50\/60, .bg-brand-50\/50):not([data-keep-light] *) { background-color: rgb(var(--brand-500) / 0.2); }
+html.night :is(.bg-rose-50\/50, .bg-rose-100):not([data-keep-light] *) { background-color: rgba(136, 19, 55, 0.35); }
+html.night :is(.bg-sky-50, .bg-violet-50):not([data-keep-light] *) { background-color: rgba(51, 65, 85, 0.45); }
 html.night :is(.glass-soft, .glass-strong):not([data-keep-light] *) {
   background: rgb(var(--night-surface) / 0.72);
   border-color: rgba(255, 255, 255, 0.07);
