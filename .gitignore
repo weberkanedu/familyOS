@@ -6,4 +6,5 @@ dist
 .env.local
 *.log
 .DS_Store
-server/familyos-relay.json
+server/.data
+server-dist

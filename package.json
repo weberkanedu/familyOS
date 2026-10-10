@@ -6,12 +6,17 @@
   "description": "FamilyOS - Aile takvimi, ev panosu ve kiosk/PWA aile işletim sistemi",
   "scripts": {
     "dev": "vite",
-    "dev:sync": "node server/dev-sync.mjs",
-    "build": "tsc --noEmit && vite build",
+    "dev:sync": "npm run build:server && node scripts/dev-server.mjs",
+    "build": "tsc --noEmit && vite build && npm run build:server",
+    "build:server": "esbuild server/index.ts --bundle --platform=node --target=node20 --format=cjs --outfile=server-dist/index.cjs --external:bufferutil --external:utf-8-validate --log-level=warning",
+    "start": "node server-dist/index.cjs",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc -p server/tsconfig.json && tsc -p worker/tsconfig.json",
     "typecheck:worker": "tsc -p worker/tsconfig.json --noEmit",
-    "test:smoke": "node scripts/render-smoke.mjs && node scripts/sync-smoke-test.mjs",
+    "test": "npm run test:smoke && npm run test:sync && npm run test:crud && npm run test:persist",
+    "test:smoke": "node scripts/render-smoke.mjs",
+    "test:sync": "npm run build:server && node scripts/sync-smoke-test.mjs",
+    "test:persist": "node scripts/persistence-check.mjs",
     "test:meals": "node scripts/meal-smoke.mjs",
     "test:location": "node scripts/location-smoke.mjs",
     "test:crud": "node scripts/crud-smoke.mjs",
@@ -22,7 +27,6 @@
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
-    "lucide-react": "^0.469.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-icons": "^5.7.0"
@@ -42,6 +46,7 @@
     "vite": "^6.0.7",
     "web-push": "^3.6.7",
     "wrangler": "^4.149.0",
-    "ws": "^8.18.0"
+    "ws": "^8.18.0",
+    "esbuild": "^0.25.12"
   }
 }

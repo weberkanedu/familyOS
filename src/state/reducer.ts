@@ -43,7 +43,7 @@ type Row = { id: string; updatedAt?: number }
 /** op'yi DB'ye uygular (immutable, yeni referans döner). */
 export function reduceOp(db: DB, op: { entity: EntityKey; action: string; items: any[] }): DB {
   if (op.action === 'replaceAll') {
-    return { ...db, [op.entity]: op.items } as DB
+    return { ...db, [op.entity]: capList(op.entity, op.items) } as DB
   }
 
   const current = db[op.entity] as unknown
@@ -86,9 +86,25 @@ export function reduceOp(db: DB, op: { entity: EntityKey; action: string; items:
     for (const [id, item] of incoming) {
       if (!seen.has(id)) out.push(item)
     }
-    next = out
+    next = capList(op.entity, out)
   }
   return { ...db, [op.entity]: next } as DB
+}
+
+/**
+ * Sınırsız büyüyen listeler (mesajlar, quiz sonuçları) için üst sınır.
+ * Her bağlantıda tüm veri gönderildiği ve tarayıcı depolaması ~5 MB olduğu için
+ * en eski kayıtlar düşürülür. İstemci, Node sunucusu ve Worker aynı kuralı uygular.
+ */
+export const LIST_CAPS: Partial<Record<EntityKey, number>> = {
+  messages: 200,
+  quizResults: 2000,
+}
+
+function capList<T extends { updatedAt?: number; at?: number }>(entity: EntityKey, list: T[]): T[] {
+  const cap = LIST_CAPS[entity]
+  if (!cap || list.length <= cap) return list
+  return [...list].sort((a, b) => (a.at ?? a.updatedAt ?? 0) - (b.at ?? b.updatedAt ?? 0)).slice(-cap)
 }
 
 export function normalizeDB(raw: unknown): DB {
@@ -101,7 +117,7 @@ export function normalizeDB(raw: unknown): DB {
     if (key === 'settings') {
       out.settings = { ...base.settings, ...(v && typeof v === 'object' ? v : {}) }
     } else {
-      out[key] = Array.isArray(v) ? (v as any[]) : ((base as any)[key] ?? [])
+      out[key] = capList(key, Array.isArray(v) ? (v as any[]) : ((base as any)[key] ?? [])) as any
     }
   }
   return out

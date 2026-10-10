@@ -8,6 +8,7 @@ import { isChoreDueToday, isChoreDoneToday, toggleChore } from '../state/actions
 import type { DB } from '../types'
 import { MEAL_SLOTS } from '../types'
 import type { TabKey } from '../state/store'
+import { getDeviceOwner } from '../sync/config'
 
 function eventStartKey(e: { start: string; allDay: boolean }): string {
   return e.allDay ? e.start.slice(0, 10) : dateKey(new Date(e.start))
@@ -232,7 +233,7 @@ export function Dashboard({
                     <li key={c.id}>
                       <button
                         type="button"
-                        onClick={() => toggleChore(c)}
+                        onClick={() => toggleChore(c, getDeviceOwner() || undefined)}
                         className={cx(
                           'w-full flex items-center gap-3 rounded-xl border p-3 text-left transition-colors touch-manipulation',
                           done ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200 hover:bg-slate-50',

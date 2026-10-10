@@ -36,6 +36,10 @@ export interface Chore {
   startDate: string // YYYY-MM-DD
   dueDate?: string // repeat=none için son tarih
   doneOn?: string // en son tamamlandığı gün (YYYY-MM-DD)
+  /** doneOn gününde kim tamamladı (yıldız geri alınırken gerekli) */
+  doneBy?: ID
+  /** Üye başına toplam yıldız (her tamamlama +1) */
+  stars?: Record<ID, number>
   updatedAt: number
 }
 

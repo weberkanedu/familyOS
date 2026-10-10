@@ -21,6 +21,7 @@ const SYNC_TONE: Record<SyncStatus, string> = {
   connecting: 'bg-amber-400 animate-pulse',
   reconnecting: 'bg-amber-400 animate-pulse',
   local: 'bg-sky-400',
+  unauthorized: 'bg-rose-500',
 }
 
 /** Duvar/tablet Kiosk modu: geniş, büyük tipografi, dokunmatik dostu. */

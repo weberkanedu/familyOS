@@ -1,7 +1,8 @@
 import { PlusIcon, TrashIcon, SparkleIcon } from '@phosphor-icons/react'
 import { useEffect, useMemo, useState } from 'react'
 import { Btn, Card, Chip, Empty, Field, Input, Modal, Segmented, Avatar, cx, Select } from '../components/ui'
-import { isChoreDoneToday, isChoreDueToday, deleteChore, saveChore, toggleChore } from '../state/actions'
+import { isChoreDoneToday, isChoreDueToday, deleteChore, saveChore, toggleChore, starTotals } from '../state/actions'
+import { useDeviceOwner } from '../sync/config'
 import { todayKey, fmtDate } from '../lib/time'
 import { uiBus } from '../state/uiBus'
 import type { DB, Repeat } from '../types'
@@ -31,7 +32,8 @@ const emptyDraft = (): Draft => ({
 })
 
 export function Chores({ db, kiosk }: { db: DB; kiosk: boolean }) {
-  const [filter, setFilter] = useState<'today' | 'all'>('today')
+  const owner = useDeviceOwner()
+  const [filter, setFilter] = useState<'today' | 'mine' | 'all'>(() => (owner ? 'mine' : 'today'))
   const [draft, setDraft] = useState<Draft | null>(null)
   const today = todayKey()
 
@@ -44,14 +46,18 @@ export function Chores({ db, kiosk }: { db: DB; kiosk: boolean }) {
 
   const memberOf = useMemo(() => new Map(db.members.map((m) => [m.id, m])), [db.members])
   const list = useMemo(() => {
-    const arr = filter === 'today' ? db.chores.filter((c) => isChoreDueToday(c, today)) : db.chores
+    const arr =
+      filter === 'all'
+        ? db.chores
+        : db.chores.filter((c) => isChoreDueToday(c, today) && (filter !== 'mine' || !c.assigneeId || c.assigneeId === owner))
     return [...arr].sort((a, b) => {
       const da = isChoreDoneToday(a, today) ? 1 : 0
       const db2 = isChoreDoneToday(b, today) ? 1 : 0
       return da - db2
     })
-  }, [db.chores, filter, today])
+  }, [db.chores, filter, today, owner])
 
+  const stars = useMemo(() => starTotals(db.chores), [db.chores])
   const due = db.chores.filter((c) => isChoreDueToday(c, today))
   const done = due.filter((c) => isChoreDoneToday(c, today)).length
   const pct = due.length ? Math.round((done / due.length) * 100) : 0
@@ -83,8 +89,9 @@ export function Chores({ db, kiosk }: { db: DB; kiosk: boolean }) {
             value={filter}
             onChange={setFilter}
             options={[
-              { value: 'today', label: 'Bugün' },
-              { value: 'all', label: 'Tümü' },
+              ...(owner ? [{ value: 'mine' as const, label: 'Benim' }] : []),
+              { value: 'today' as const, label: 'Bugün' },
+              { value: 'all' as const, label: 'Tümü' },
             ]}
           />
           <Btn onClick={() => setDraft(emptyDraft())} size={kiosk ? 'lg' : 'md'}>
@@ -105,6 +112,28 @@ export function Chores({ db, kiosk }: { db: DB; kiosk: boolean }) {
             </div>
           </div>
         </div>
+        {stars.size > 0 && (
+          <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-slate-100" aria-label="Yıldız tablosu">
+            {[...db.members]
+              .filter((m) => (stars.get(m.id) ?? 0) > 0)
+              .sort((a, b) => (stars.get(b.id) ?? 0) - (stars.get(a.id) ?? 0))
+              .map((m, i) => (
+                <div
+                  key={m.id}
+                  className={cx(
+                    'flex items-center gap-2 rounded-full pl-1 pr-3 py-1 border',
+                    i === 0 ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-200',
+                  )}
+                >
+                  <Avatar member={m} size="sm" />
+                  <span className={cx('font-bold text-slate-700', kiosk && 'text-lg')}>{m.name}</span>
+                  <span className={cx('font-extrabold text-amber-500 tabular-nums', kiosk && 'text-lg')}>
+                    ★ {stars.get(m.id)}
+                  </span>
+                </div>
+              ))}
+          </div>
+        )}
       </Card>
 
       {list.length === 0 ? (
@@ -120,7 +149,7 @@ export function Chores({ db, kiosk }: { db: DB; kiosk: boolean }) {
               <Card key={c.id} className={cx('p-4 flex items-center gap-3 transition-colors', doneToday && 'bg-emerald-50/70 border-emerald-200')}>
                 <button
                   type="button"
-                  onClick={() => toggleChore(c)}
+                  onClick={() => toggleChore(c, owner || undefined)}
                   aria-label="Tamamla"
                   className={cx(
                     'w-11 h-11 rounded-xl grid place-items-center text-lg font-bold border-2 shrink-0 touch-manipulation',

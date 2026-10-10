@@ -11,12 +11,14 @@ import type { TabKey } from '../../state/store'
 import { uiBus } from '../../state/uiBus'
 import { MessageFlash } from '../IdleScreen'
 import { themeById } from '../../lib/themes'
+import { useDeviceOwner } from '../../sync/config'
 
 const SYNC_TONE: Record<SyncStatus, string> = {
   live: 'bg-emerald-500',
   connecting: 'bg-amber-400 animate-pulse',
   reconnecting: 'bg-amber-400 animate-pulse',
   local: 'bg-sky-400',
+  unauthorized: 'bg-rose-500',
 }
 
 /** Mobil PWA modu: alt navigasyon, tek elle kullanım, hızlı ekleme (FAB). */
@@ -38,6 +40,7 @@ export function MobileLayout({
   children: ReactNode
 }) {
   const now = useClock(15_000)
+  const owner = useDeviceOwner()
   const [fabOpen, setFabOpen] = useState(false)
   const bottom = NAV.filter((n) => n.inBottomBar)
   const current = NAV.find((n) => n.key === tab)
@@ -75,7 +78,7 @@ export function MobileLayout({
             aria-label={syncLabel(status)}
           >
             <span className={cx('w-2.5 h-2.5 rounded-full', SYNC_TONE[status])} />
-            <Avatar member={db.members[0]} size="sm" />
+            <Avatar member={db.members.find((m) => m.id === owner) ?? db.members[0]} size="sm" />
           </button>
         </div>
       </header>

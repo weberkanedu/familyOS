@@ -15,7 +15,9 @@ gerçek zamanlı senkronize çalışan, modüler ve hafif aile işletim sistemi.
 | 🎓 **Öğrenme** | Quiz (JSON içe aktarma) + **Anki tarzı aralıklı tekrar** (SM-2, Zor/Orta/Kolay) |
 | 🌤 **Hava Durumu** | Open-Meteo, **sabit ev adresi: Ankara 06070** (anahtarsız), 3 günlük tahmin |
 | 💬 **Mesajlaşma** | Telefondan duvara anlık not, ses + titreşim + ekran uyandırma overlay'i |
-| 📲 **PWA** | Service worker, çevrimdışı fallback, Web Push, offline-first |
+| 📲 **PWA** | Service worker, internetsiz açılış, Web Push, çevrimdışı değişiklik kuyruğu |
+| ⭐ **Yıldızlar** | Tamamlanan görev başına yıldız, aile yıldız tablosu, telefonda "Benim" görevlerim |
+| 📥 **İçe aktarma** | Google/Apple takvimi (.ics), JSON yedek (tüm cihazlara yayılır), sunucuda günlük otomatik yedek |
 | 🖥 **Kiosk** | Büyük tipografi, dokunmatik, idle'da **kelime kartları** (15 sn rotasyon) |
 
 ---
@@ -23,110 +25,73 @@ gerçek zamanlı senkronize çalışan, modüler ve hafif aile işletim sistemi.
 ## 1. Teknoloji Yığını
 
 - **Frontend:** Vite + React 18 + TypeScript + Tailwind CSS + Lucide icons
-- **Eski cihaz desteği:** `@vitejs/plugin-legacy` → ES5 çıktısı + polyfill (Android 5+/Chrome 60+)
+- **Cihaz desteği:** Chrome 87+ (Android 5/6 tabletlerde güncel Chrome yeterli); eksik API'ler için otomatik polyfill
 - **State:** İkili kayıt (`localStorage`) + op (operation) tabanlı senkron — son yazan kazanır
-- **Realtime:** WebSocket (`/sync`) — **Cloudflare Worker + Durable Object + D1**
-  *veya* yerel relay (`ws`), *veya* yalnızca bu cihaz (localStorage + BroadcastChannel)
-- **Deploy:** Docker/Nginx (Dokploy, Portainer, herhangi bir host) veya Cloudflare
+- **Realtime:** WebSocket (`/sync`) — **Node sunucusu (Docker)** *veya* Cloudflare Worker + Durable Object,
+  *veya* yalnızca bu cihaz (localStorage + BroadcastChannel). Aile kodu ile korunur.
+- **Deploy:** Docker (Dokploy, Portainer, herhangi bir host) veya Cloudflare
 
 ---
 
 ## 1-B. Kurulum (Dokploy + Android tablet)
 
-Program hazır. Çalıştırmak için yapmanız gereken:
+Tek Docker imajı: uygulama + gerçek zamanlı senkron + kalıcı veri + günlük yedek.
 
-### Adım 1 — Dokploy'da uygulamayı yayınlayın
-
-Dokploy → **Apps** → **Create App** → **Application**
+### Adım 1 — Dokploy'da uygulama
 
 | Alan | Değer |
 |------|-------|
-| Uygulama Adı | `aile-panosu` |
 | Build Type | Dockerfile |
-| Dockerfile | varsayılan (`Dockerfile` depoda) |
-| Port | `80` (container içi) |
+| Port (container) | **`3000`** |
+| Environment | `FAMILY_CODE=<ailenize özel gizli bir kod>` |
+| Volume / Mount | Volume → mount path **`/data`** (veriler ve yedekler burada; yoksa her güncellemede veri sıfırlanır) |
 
-**Environment** sekmesinde (opsiyonel — senkron istiyorsanız):
+**Deploy**'a basın. Alan adı (Domains) ekleyin; Let's Encrypt sertifikası otomatik verilir.
 
-```
-VITE_SYNC_URL=wss://<senin-worker-adresin>/sync
-```
+### Adım 2 — Cihazları bağlayın
 
-Sonra **Deploy**'a basın. Build ~2 dakika sürer.
+1. **Önce mevcut verinin durduğu tableti açın.** Sunucu boşsa tabletteki veriler sunucuya yüklenir (silinmez).
+2. Her cihazda adresi bir kez şöyle açın: `https://aile-panosu.alanadiniz.com/?kod=<FAMILY_CODE>`
+   (kod cihazda saklanır ve adresten silinir) — ya da açılan pencereye kodu yazın.
+3. Telefonlarda: Ayarlar → *Bu cihaz kimin?* → kendinizi seçin (Görevler'de "Benim" filtresi + yıldızlar).
 
-### Adım 2 — Alan adı bağlayın
+### Adım 3 — Tablette tam ekran
 
-Dokploy → uygulama → **Domains** → `aile-panosu.alanadresiniz.com` ekleyin.
-Dokploy Let's Encrypt sertifikasını otomatik verir.
-
-Artık uygulama `https://aile-panosu.alanadresiniz.com` adresinden açılır.
-
-### Adım 3 — Tablet'te tam ekran (kiosk) modu
-
-1. Chrome'u açın → adres çubuğuna uygulama adresini yazın
-2. Sağ üstteki **⋮ menüsü** → **"Ana ekrana ekle"** / **"Yükle"**
-   (PWA olarak kurulur, tam ekran açılır)
-3. Ana ekrandaki simgeye dokunun — tarayıcı çubuğu olmadan açılır
-4. **Tam kilit (kiosk):** Ayarlar → Güvenlik → **"Ekrandan kilitleme"** seçeneğini açın,
-   ardından uygulamayı açın. Ekran açık kalır, uygulama dışına çıkılamaz.
-
-> **İpucu:** Ekranın hiç sönmesin diye → Ayarlar → Ekran → **"Ekranı açık tut"** / *"Sleep"* → **45 dakika veya daha uzun**.
-
-### Adım 4 — Evdeki bilgisayar olmadan da çalışsın
-
-Uygulama Dokploy'da çalıştığı için bilgisayarınız kapalıyken de tablet çalışır.
-Senkron (telefon ↔ duvar) için `VITE_SYNC_URL` gerekir; boş bırakırsanız
-uygulama **yalnızca tablet üzerinde** çalışır (veriler o cihazda kalır).
+Chrome → ⋮ → **Ana ekrana ekle**, simgeden açın. Ekran zaman aşımını kapatın, şarjda bırakın.
 
 ### Veriler nerede?
 
-Tüm veriler **tarayıcıda** (`localStorage`) tutulur — sunucuya yazılmaz.
-Cihaz değiştirirken: Ayarlar → **Dışa/içe aktarma** ile yedekleyip geri yükleyin.
+Sunucuda `/data/state.json` (+ `/data/backups/` son 14 gün). Her cihaz bir kopyasını tutar, internetsiz de çalışır.
+Ayarlar → Veri: yedek indir/geri yükle (geri yükleme tüm cihazlara yayılır), Google Takvim `.ics` içe aktarma.
 
----
-
-## 2. Hızlı Başlangıç
+## 2. Hızlı Başlangıç (geliştirme)
 
 ```bash
 npm install
-npm run icons        # ikonlar zaten varsa gerek yok (public/icons/)
-npm run dev          # http://localhost:5173  (LAN'da tabletten: http://<pc-ip>:5173)
+npm run dev:sync     # Terminal 1: senkron sunucusu (ws://localhost:8787, aile kodu: 1234)
+VITE_SYNC_URL=ws://localhost:8787/sync npm run dev   # Terminal 2: arayüz (http://localhost:5173)
 ```
 
-**Gerçek zamanlı senkron için** (telefon ↔ duvar ekranı) 3 seçenek:
+- `VITE_SYNC_URL` vermezseniz `npm run dev` **yalnızca bu cihaz** modunda çalışır.
+- Üretim derlemesi (`npm run build`) senkronu otomatik olarak **aynı adresteki `/sync`** üzerinden yapar;
+  ek ayar gerekmez. `npm start` derlenmiş uygulamayı + senkronu tek süreçte çalıştırır.
 
-### A) Yerel/LAN relay (cloud'suz, hemen test) — *önerilen başlangıç*
+### Testler
 
 ```bash
-# Terminal 1
-npm run dev:sync          # ws://0.0.0.0:8787  (veriler server/familyos-relay.json)
-
-# Terminal 2 — .env dosyası oluştur:
-#   VITE_SYNC_URL=ws://192.168.1.50:8787   ← PC'nizin yerel IP'si
-npm run dev
+npm run typecheck    # arayüz + Node sunucusu + Cloudflare worker
+npm test             # render, sunucu uçtan uca (aile kodu, tekrar gönderim, kalıcılık, başlıklar), kayıt, yedek
 ```
 
-Tablet/telefon aynı Wi-Fi'daysa hepsi anında senkronize olur.
-
-### B) Yalnızca bu cihaz (hiçbir ayar yapmadan)
-
-`VITE_SYNC_URL` boşsa uygulama **yerel modda** çalışır: veriler cihazda saklanır,
-aynı cihazdaki sekmeler arası senkronize olur. İnternet yoksa da çalışır.
-
-### C) Canlı (Cloudflare) — her yerden senkron
+### Cloudflare (alternatif)
 
 ```bash
 npx wrangler login
 npx wrangler d1 create familyos                 # çıkan database_id'yi wrangler.toml'a yaz
-npm run cf:db:init                              # worker/schema.sql uygulanır
-npx wrangler deploy                             # build + deploy (dist + worker)
-
-# .env içine yazın:
-#   VITE_SYNC_URL=wss://familyos.<hesabiniz>.workers.dev/sync
-npm run build && npx wrangler deploy            # tekrar deploy (env değişti)
+npm run cf:db:init                              # worker/schema.sql (push abonelikleri)
+npx wrangler secret put FAMILY_CODE
+npm run cf:deploy
 ```
-
----
 
 ## 3. Proje Klasör Yapısı
 
@@ -137,7 +102,7 @@ familyos/
 ├── vite.config.ts                 # legacy (eski Android) hedefleri
 ├── tailwind.config.js             # renkler, animasyonlar
 ├── wrangler.toml                  # Worker + D1 + DO + statik assets
-├── .env.example                   # VITE_SYNC_URL, VITE_VAPID_PUBLIC_KEY
+├── .env.example                   # VITE_SYNC_URL (çoğu durumda boş)
 │
 ├── public/
 │   ├── manifest.webmanifest       # PWA manifest (kısayollar dahil)
@@ -151,7 +116,8 @@ familyos/
 │   └── sync-smoke-test.mjs        # WebSocket uçtan uca senkron testi
 │
 ├── server/
-│   └── dev-sync.mjs               # Yerel/LAN WebSocket relay sunucusu
+│   ├── index.ts                   # Docker sunucusu: statik + /sync + push + yedek
+│   └── securityHeaders.ts         # CSP vb. (Docker + Cloudflare ortak)
 │
 ├── worker/
 │   ├── schema.sql                 # D1 şeması (aşağıda §4)
@@ -236,7 +202,8 @@ const { status, url, received } = useFamilySync()
 // status: 'live' | 'connecting' | 'reconnecting' | 'local'
 ```
 
-- **WebSocket** → `VITE_SYNC_URL` (1-2 sn gecikme, otomatik yeniden bağlanma + heartbeat)
+- **WebSocket** → aynı adresteki `/sync` (aile kodu, 1-2 sn gecikme, otomatik yeniden bağlanma + heartbeat)
+- **Giden kutusu** → bağlantı yokken yapılan değişiklikler saklanır, bağlantı gelince gönderilir
 - **BroadcastChannel** → aynı cihazdaki sekmeler
 - **localStorage** → kalıcılık / çevrimdışı
 - Soğuk başlatmada sunucu tam `snapshot` gönderir; bundan sonra yalnızca `op` akar.
@@ -317,46 +284,12 @@ kartlarda hover yükselme, ilerleme çubuğunda parlama var. Tümü saf CSS (ağ
 
 ---
 
-## 6. Kurulum ve Dağıtım Adımları
+## 6. Dağıtım Özeti
 
-### Yerel geliştirme
-
-```bash
-npm install
-npm run dev            # arayüz
-npm run dev:sync       # senkron relay (ayrı terminal)
-npm run typecheck      # TS kontrolü
-npm run test:smoke     # render + WebSocket uçtan uca testi
-npm run build          # üretim derlemesi (legacy dahil)
-```
-
-### Cloudflare canlıya alma
-
-```bash
-npx wrangler login
-npx wrangler d1 create familyos
-# → wrangler.toml içindeki database_id değerini güncelleyin
-npm run cf:db:init
-npm run build
-npx wrangler deploy
-```
-
-Çıkan adresi `wss://<ad>/sync` biçiminde `.env` `VITE_SYNC_URL` değerine yazıp
-tekrar `npm run build && npx wrangler deploy` çalıştırın.
-
-**Web Push (opsiyonel):**
-
-```bash
-npx wrangler secret put VAPID_PUBLIC_KEY
-npx wrangler secret put VAPID_PRIVATE_KEY
-npx wrangler secret put VAPID_SUBJECT      # örn. mailto:aile@example.com
-# Aynı publicKey'i .env içine: VITE_VAPID_PUBLIC_KEY=...
-```
-
-> Statik assets `wrangler.toml → [assets]` ile aynı Worker'da servis edilir;
-> `/sync`, `/push/*` yolları Worker'a yönlendirilir.
-
----
+- **Docker / Dokploy** (önerilen): bkz. §1-B. `docker run -p 3000:3000 -e FAMILY_CODE=… -v ailepanosu-data:/data <imaj>`
+- **Cloudflare**: bkz. §2 → *Cloudflare*. Web Push için ayrıca `npx wrangler secret put VAPID_PUBLIC_KEY`,
+  `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (genel anahtar istemciye `/push/key` ile verilir).
+  Eski sürümün D1 `family_state` kaydı ilk açılışta Durable Object depolamasına taşınır.
 
 ## 7. Duvar/Tablet (Kiosk) Kurulumu — Eski Android
 
@@ -371,18 +304,41 @@ npx wrangler secret put VAPID_SUBJECT      # örn. mailto:aile@example.com
 
 ---
 
-## 8. Sık Ayarlar (`.env`)
+## 8. Ortam Değişkenleri
+
+**Sunucu (Docker / Dokploy → Environment):**
 
 | Anahtar | Açıklama |
 | --- | --- |
-| `VITE_SYNC_URL` | `ws://…:8787` (yerel) veya `wss://…workers.dev/sync` (canlı). Boş = yerel mod |
-| `VITE_VAPID_PUBLIC_KEY` | Web Push anahtarı (push kapalıysa boş bırakılabilir) |
+| `FAMILY_CODE` | **Zorunlu.** Cihazlarda bir kez girilen aile kodu (en az 6 karakter önerilir). Kodu bilmeyen veriyi göremez/değiştiremez |
+| `PORT` | Varsayılan `3000` |
+| `DATA_DIR` | Varsayılan `/data` (Docker). `state.json` + `backups/` (günlük, 14 gün) + Web Push anahtarları |
+| `ALLOWED_ORIGINS` | Uygulama başka bir alan adından senkrona bağlanacaksa (virgülle) |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` | Opsiyonel — verilmezse sunucu kendisi üretir |
+
+**Derleme (`.env`, çoğu durumda gerekmez):**
+
+| Anahtar | Açıklama |
+| --- | --- |
+| `VITE_SYNC_URL` | Boş = uygulamanın kendi adresi (`/sync`). `off` = yalnızca bu cihaz. Ya da başka bir `wss://…/sync` |
 
 ---
 
 ## 9. PWA / Offline Davranışı
 
-- `sw.js`: navigasyonda **ağ → önbellek → offline.html**; statik varlıklarda önbellek öncelik.
-- `push` olayı → yerel bildirim; `notificationclick` → sekmeyi açar.
-- İnternet kesilirse veriler `localStorage`'da yaşamaya devam eder, bağlantı gelince
-  op'ler kuyruk gibi iletilir ve tüm cihazlar birleşir.
+- `sw.js`: kurulumda uygulama dosyalarını önbelleğe alır → tablet internetsiz yeniden açılsa da çalışır.
+  Navigasyonda **ağ → önbellek → offline.html**; derleme dosyalarında önbellek öncelik.
+- `push` olayı → bildirim; `notificationclick` → Mesajlar sekmesini açar.
+- İnternet/sunucu kesilirse değişiklikler **giden kutusunda** (`familyos:outbox:v1`) bekler; bağlantı gelince
+  sunucunun güncel verisinin üzerine yeniden uygulanıp gönderilir. Sunucu aynı değişikliği iki kez uygulamaz.
+- 15 sn'den uzun kopmalarda ekranda "N değişiklik bağlantı gelince gönderilecek" uyarısı görünür;
+  cihaz hafızası dolarsa kırmızı uyarı çıkar.
+
+## 10. Güvenlik
+
+- Senkron ve bildirim uçları **aile kodu** ister; kod WebSocket'in ilk mesajında gönderilir (adreste/loglarda görünmez).
+  IP başına 10 dk'da 10 hatalı denemeden sonra 10 dk bekletilir.
+- Başka sitelerden gelen WebSocket bağlantıları (Origin) reddedilir.
+- Sunucu gelen her değişikliği doğrular (bilinmeyen tablo, kimliksiz kayıt, aşırı büyük liste, gelecek tarihli damga).
+- Sıkı CSP + `X-Frame-Options`, `nosniff`, `Referrer-Policy` (`server/securityHeaders.ts`, Docker ve Cloudflare ortak).
+- Docker imajı root olmayan kullanıcıyla çalışır; sunucu tek dosyaya paketlidir (`node_modules` yok).

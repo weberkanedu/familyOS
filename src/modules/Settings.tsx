@@ -1,11 +1,14 @@
-import { MagnifyingGlassIcon, PlusIcon, TrashIcon, DownloadSimpleIcon, UploadSimpleIcon, ArrowsClockwiseIcon, BellIcon, BellRingingIcon, UsersIcon, MonitorIcon, MapPinIcon, ArrowClockwiseIcon, ImageIcon, TextTIcon, PaletteIcon } from '@phosphor-icons/react'
+import { MagnifyingGlassIcon, PlusIcon, TrashIcon, DownloadSimpleIcon, UploadSimpleIcon, ArrowsClockwiseIcon, BellIcon, BellRingingIcon, UsersIcon, MonitorIcon, MapPinIcon, ArrowClockwiseIcon, ImageIcon, TextTIcon, PaletteIcon, CalendarPlusIcon } from '@phosphor-icons/react'
 import { useEffect, useRef, useState } from 'react'
 import { Btn, Card, Chip, Field, Input, Modal, SectionTitle, Toggle, cx, Avatar, Select, GlassCard } from '../components/ui'
-import { addLocation, deleteMember, removeLocation, saveMember, saveSettings, selectLocation } from '../state/actions'
+import { addLocation, deleteMember, importEvents, removeLocation, saveMember, saveSettings, selectLocation } from '../state/actions'
 import { exportDB, importDB, resetDB } from '../state/store'
 import { searchPlaces, type GeoPlace } from '../lib/openMeteo'
 import { disablePush, enablePush, permissionState, pushSupported } from '../lib/push'
-import { fileToDataUrl, approxKb } from '../lib/image'
+import { fileToDataUrl, approxKb, PHOTO_SIZES } from '../lib/image'
+import { parseIcs } from '../lib/ics'
+import { getDeviceOwner, getFamilyCode, setDeviceOwner, setFamilyCode } from '../sync/config'
+import { PRESYNC_KEY } from '../sync/useFamilySync'
 import { THEMES } from '../lib/themes'
 import { HOME } from '../lib/location'
 import type { AppMode, DB, Member, Role, SoundMode } from '../types'
@@ -47,6 +50,10 @@ export function Settings({ db, kiosk, sync }: { db: DB; kiosk: boolean; sync: { 
   const fileRef = useRef<HTMLInputElement | null>(null)
   const photoRef = useRef<HTMLInputElement | null>(null)
   const memberPhotoRef = useRef<HTMLInputElement | null>(null)
+  const icsRef = useRef<HTMLInputElement | null>(null)
+  const [codeDraft, setCodeDraft] = useState(getFamilyCode)
+  const [codeNote, setCodeNote] = useState<string | null>(null)
+  const [owner, setOwner] = useState(getDeviceOwner)
 
   useEffect(() => {
     void permissionState().then((p) => setPushState(p))
@@ -64,11 +71,34 @@ export function Settings({ db, kiosk, sync }: { db: DB; kiosk: boolean; sync: { 
     }
   }
 
-  const onPush = async () => {
-    const key = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined
+  const onSaveCode = () => {
+    setFamilyCode(codeDraft)
+    setCodeNote('Kaydedildi, bağlanılıyor…')
+    setTimeout(() => setCodeNote(null), 4000)
+  }
+
+  const onImportIcs = async (f: File | null) => {
+    if (!f) return
     try {
-      if (!key) throw new Error('VITE_VAPID_PUBLIC_KEY tanımlı değil')
-      await enablePush(key)
+      const { events, skippedOld, recurring } = parseIcs(await f.text())
+      if (!events.length) {
+        alert('Dosyada içe aktarılacak (son 30 gün ve sonrası) etkinlik bulunamadı.')
+        return
+      }
+      importEvents(events)
+      alert(
+        `${events.length} etkinlik takvime eklendi.` +
+          (skippedOld ? `\n${skippedOld} eski etkinlik atlandı.` : '') +
+          (recurring ? `\n${recurring} yinelenen etkinliğin yalnızca ilk tarihi alındı.` : ''),
+      )
+    } catch {
+      alert('Takvim dosyası okunamadı (.ics olmalı)')
+    }
+  }
+
+  const onPush = async () => {
+    try {
+      await enablePush()
       setPushState('granted')
       setPushMsg('Bildirimler açıldı ✓')
     } catch (e: any) {
@@ -77,14 +107,22 @@ export function Settings({ db, kiosk, sync }: { db: DB; kiosk: boolean; sync: { 
     setTimeout(() => setPushMsg(null), 4000)
   }
 
-  const onExport = () => {
-    const blob = new Blob([exportDB()], { type: 'application/json' })
+  const download = (json: string, name: string) => {
+    const blob = new Blob([json], { type: 'application/json' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
-    a.download = `familyos-yedek-${new Date().toISOString().slice(0, 10)}.json`
+    a.download = `${name}-${new Date().toISOString().slice(0, 10)}.json`
     a.click()
-    URL.revokeObjectURL(a.href)
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000)
   }
+  const onExport = () => download(exportDB(), 'familyos-yedek')
+  const presync = (() => {
+    try {
+      return localStorage.getItem(PRESYNC_KEY)
+    } catch {
+      return null
+    }
+  })()
 
   const onImport = async (f: File | null) => {
     if (!f) return
@@ -100,8 +138,7 @@ export function Settings({ db, kiosk, sync }: { db: DB; kiosk: boolean; sync: { 
     if (!f) return
     setPhotoBusy(true)
     try {
-      // Boyut sınırı yok — yüklenen fotoğraf aynen kabul edilir
-      const url = await fileToDataUrl(f, 0, 0.92)
+      const url = await fileToDataUrl(f, PHOTO_SIZES.family.maxSize, PHOTO_SIZES.family.quality)
       saveSettings({ familyPhoto: url })
       setPhotoNote(`Yüklendi · yaklaşık ${approxKb(url)} KB`)
     } catch {
@@ -115,7 +152,7 @@ export function Settings({ db, kiosk, sync }: { db: DB; kiosk: boolean; sync: { 
     if (!f || !md) return
     setPhotoBusy(true)
     try {
-      const url = await fileToDataUrl(f, 0, 0.92)
+      const url = await fileToDataUrl(f, PHOTO_SIZES.member.maxSize, PHOTO_SIZES.member.quality)
       setMd({ ...md, photo: url })
       // Var olan üye için fotoğrafı hemen kaydet (Ek ayrı "Kaydet" gerektirmesin)
       if (md.id) saveMember({ id: md.id, photo: url })
@@ -170,7 +207,7 @@ export function Settings({ db, kiosk, sync }: { db: DB; kiosk: boolean; sync: { 
             )}
             {photoNote && <span className="text-xs font-bold text-emerald-600">{photoNote}</span>}
             <p className="text-xs text-slate-400 font-medium max-w-xs">
-              Sol üstteki aile alanında görünür. Boyut sınırı yoktur — istediğiniz fotoğrafı yükleyebilirsiniz.
+              Sol üstteki aile alanında görünür. Fotoğraf ekrana uygun boyuta otomatik küçültülür (tablet hafızası dolmasın).
               Fotoğraf aileyle senkronize olur, yani duvar ekranında da görünür.
             </p>
           </div>
@@ -515,10 +552,45 @@ export function Settings({ db, kiosk, sync }: { db: DB; kiosk: boolean; sync: { 
         </div>
         {pushMsg && <div className="rounded-xl bg-slate-50 border border-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-600">{pushMsg}</div>}
 
+        {sync.url && (
+          <Field label="Aile kodu (sunucudaki FAMILY_CODE)">
+            <div className="flex gap-2">
+              <Input
+                type="password"
+                autoComplete="off"
+                value={codeDraft}
+                placeholder="Aile kodunu girin"
+                onChange={(e) => setCodeDraft(e.target.value)}
+              />
+              <Btn onClick={onSaveCode} disabled={!codeDraft.trim()}>
+                Kaydet
+              </Btn>
+            </div>
+            {codeNote && <div className="text-xs font-bold text-emerald-600 mt-1.5">{codeNote}</div>}
+          </Field>
+        )}
+
+        <Field label="Bu cihaz kimin? (telefonda “benim görevlerim” için)">
+          <Select
+            value={owner}
+            onChange={(e) => {
+              setOwner(e.target.value)
+              setDeviceOwner(e.target.value)
+            }}
+          >
+            <option value="">Ortak cihaz (duvar ekranı)</option>
+            {db.members.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.emoji} {m.name}
+              </option>
+            ))}
+          </Select>
+        </Field>
+
         <div className="rounded-xl bg-slate-50 border border-slate-100 px-4 py-3 text-sm">
           <div className="flex justify-between gap-3">
             <span className="font-semibold text-slate-500">Senkron adresi</span>
-            <span className="font-mono text-xs text-slate-700 break-all text-right">{sync.url ?? 'yerel mod (VITE_SYNC_URL boş)'}</span>
+            <span className="font-mono text-xs text-slate-700 break-all text-right">{sync.url ?? 'yerel mod (yalnızca bu cihaz)'}</span>
           </div>
           <div className="flex justify-between gap-3 mt-1.5">
             <span className="font-semibold text-slate-500">Durum</span>
@@ -555,15 +627,41 @@ export function Settings({ db, kiosk, sync }: { db: DB; kiosk: boolean; sync: { 
             className="hidden"
             onChange={(e) => void onImport(e.target.files?.[0] ?? null)}
           />
+          {presync && (
+            <Btn variant="soft" onClick={() => download(presync, 'familyos-senkron-oncesi')}>
+              <DownloadSimpleIcon className="w-4 h-4" /> Senkron öncesi veriyi indir
+            </Btn>
+          )}
+          <Btn variant="soft" onClick={() => icsRef.current?.click()}>
+            <CalendarPlusIcon className="w-4 h-4" /> Takvim içe aktar (.ics)
+          </Btn>
+          <input
+            ref={icsRef}
+            type="file"
+            accept="text/calendar,.ics"
+            className="hidden"
+            onChange={(e) => {
+              void onImportIcs(e.target.files?.[0] ?? null)
+              e.target.value = ''
+            }}
+          />
           <Btn
             variant="danger"
-            onClick={() => confirm('Tüm veriler silinip fabrika ayarlarına dönülecek. Emin misiniz?') && resetDB()}
+            onClick={() =>
+              confirm(
+                sync.url
+                  ? 'Bu cihazdaki kopya silinecek; aile verisi sunucudan yeniden yüklenecek. Emin misiniz?'
+                  : 'Bu cihazdaki tüm veriler silinecek. Emin misiniz?',
+              ) && (resetDB(), sync.url && location.reload())
+            }
           >
-            <ArrowsClockwiseIcon className="w-4 h-4" /> Sıfırla
+            <ArrowsClockwiseIcon className="w-4 h-4" /> Bu cihazı sıfırla
           </Btn>
         </div>
         <p className="text-xs text-slate-400 font-medium">
-          Veriler cihazda (localStorage) tutulur ve <b>senkron sunucusu üzerinden</b> tüm cihazlara dağıtılır. Düzenli yedek almanız önerilir.
+          Veriler <b>senkron sunucusunda</b> saklanır (her gün otomatik yedek, son 14 gün) ve tüm cihazlara dağıtılır.
+          “Yedek geri yükle” tüm cihazları yedekteki duruma döndürür. Google Takvim: Ayarlar → İçe ve dışa aktar → Dışa aktar ile
+          alınan .ics dosyasını yükleyin.
         </p>
       </Section>
 

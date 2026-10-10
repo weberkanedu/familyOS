@@ -3,17 +3,20 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 import './styles/index.css'
 import { seedDB } from './state/seed'
-import { getDB, hydrate } from './state/store'
+import { getDB, hydrate, markSeedOnly } from './state/store'
 import { migrate } from './state/migrate'
+import { resolveSyncUrl } from './sync/config'
 
 /* İlk açılış: boşsa tohum veriyle başlat (id'ler sabit → cihazlar arası çakışmaz) */
 if (getDB().members.length === 0) {
   hydrate(seedDB())
+  markSeedOnly()
 }
 
-/* Eski sürümden kalan verileri güncel şemaya taşı */
-migrate()
-
+/* Eski sürümden kalan verileri güncel şemaya taşı.
+ * Senkron açıksa göç, sunucu verisi geldikten sonra yapılır (useFamilySync) —
+ * aksi halde bu cihazın varsayılan ayarları ailenin ayarlarının üstüne yazılırdı. */
+if (!resolveSyncUrl()) migrate()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

@@ -8,9 +8,9 @@ compatibility_flags = ["nodejs_compat"]
 directory = "./dist"
 binding = "ASSETS"
 not_found_handling = "single-page-application"
-run_worker_first = ["/sync", "/push/subscribe", "/push/unsubscribe", "/health"]
+run_worker_first = true   # güvenlik başlıkları için tüm istekler worker'dan geçer
 
-# Sürekli depolama (soğuk başlatmada aile verisi)
+# D1: Web Push abonelikleri (aile verisi Durable Object depolamasında)
 [[d1_databases]]
 binding = "DB"
 database_name = "familyos"

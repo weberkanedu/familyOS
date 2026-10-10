@@ -1,5 +1,5 @@
 /* FamilyOS Service Worker - çevrimdışı fallback + önbellek + push */
-const VERSION = 'familyos-v1'
+const VERSION = 'familyos-v2' // değişince eski önbellekler silinir
 const PRECACHE = `${VERSION}-precache`
 const RUNTIME = `${VERSION}-runtime`
 const OFFLINE_URL = '/offline.html'
@@ -13,11 +13,24 @@ const PRECACHE_ASSETS = [
   '/icons/icon-512.png',
 ]
 
+/** index.html'in yüklediği derleme dosyalarını da önbelleğe al:
+ *  tablet internetsiz yeniden açılsa bile uygulama başlayabilsin. */
+async function precacheAppShell(cache) {
+  await cache.addAll(PRECACHE_ASSETS).catch(() => undefined)
+  try {
+    const html = await (await fetch('/index.html', { cache: 'no-store' })).text()
+    const assets = [...html.matchAll(/(?:src|href)="(\/assets\/[^"]+)"/g)].map((m) => m[1])
+    await cache.addAll(assets)
+  } catch (e) {
+    /* çevrimdışı kurulum: çalışma anında önbelleğe alınır */
+  }
+}
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches
       .open(PRECACHE)
-      .then((cache) => cache.addAll(PRECACHE_ASSETS).catch(() => undefined))
+      .then(precacheAppShell)
       .then(() => self.skipWaiting()),
   )
 })
@@ -104,4 +117,4 @@ self.addEventListener('notificationclick', (event) => {
       return self.clients.openWindow(url)
     }),
   )
-}
+})

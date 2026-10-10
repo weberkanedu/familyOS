@@ -1,156 +1,108 @@
 /**
  * FamilyOS realtime sunucusu — Cloudflare Worker + Durable Object
+ * (Docker/Dokploy karşılığı: server/index.ts — aynı protokol ve kurallar)
  *
- * - /sync            → WebSocket (snapshot + op yayını, 1-2 sn gecikme)
- * - /push/subscribe  → Web Push aboneliği (D1)
+ * - /sync            → WebSocket (aile kodu → snapshot + op yayını)
+ * - /push/key        → Web Push genel anahtarı
+ * - /push/subscribe  → Web Push aboneliği (D1, aile kodu ister)
  * - /push/unsubscribe
- * - statik dosyalar  → Workers Static Assets (dist)
+ * - statik dosyalar  → Workers Static Assets (dist) + güvenlik başlıkları
  *
- * İstemci protokolü: src/sync/protocol.ts
+ * Gizli değerler: npx wrangler secret put FAMILY_CODE (zorunlu), VAPID_* (opsiyonel)
+ * Veri Durable Object'in kendi depolamasında (varlık başına ayrı anahtar) tutulur;
+ * eski sürümün D1 family_state kaydı ilk açılışta bir kez içe alınır.
  */
 import { DurableObject } from 'cloudflare:workers'
-import type { DB, EntityKey } from '../../src/types'
+import type { EntityKey } from '../../src/types'
 import { ENTITY_KEYS } from '../../src/types'
 import type { ClientMsg, Op, ServerMsg } from '../../src/sync/protocol'
+import { CLOSE_AUTH, MAX_MESSAGE_BYTES, safeEqual, sanitizeOp } from '../../src/sync/protocol'
+import { AuthLimiter, RoomState } from '../../src/sync/room'
+import { SECURITY_HEADERS } from '../../server/securityHeaders'
 
 interface Env {
   ASSETS: Fetcher
   DB: D1Database
   ROOM: DurableObjectNamespace
+  FAMILY_CODE?: string
+  ALLOWED_ORIGINS?: string
   VAPID_PUBLIC_KEY?: string
   VAPID_PRIVATE_KEY?: string
   VAPID_SUBJECT?: string
 }
 
-const MAX_OPS = 400
-const PERSIST_DEBOUNCE_MS = 1500
+type Attachment = { authed: boolean; ip: string }
 
-function emptyDB(): DB {
-  return {
-    members: [],
-    events: [],
-    chores: [],
-    shopping: [],
-    meals: [],
-    words: [],
-    quiz: [],
-    quizResults: [],
-    messages: [],
-    nutrition: [],
-    lessons: [],
-    settings: {
-      id: 'main',
-      familyName: 'Aile Panosu',
-      mode: 'auto',
-      idleMinutes: 3,
-      city: 'Ankara 06070',
-      lat: 39.9208,
-      lon: 32.8541,
-      weatherEnabled: true,
-      soundEnabled: true,
-      soundMode: 'wall',
-      savedLocations: [{ label: 'Ankara 06070', lat: 39.9208, lon: 32.8541, home: true }],
-      updatedAt: Date.now(),
-    },
+const limiter = new AuthLimiter()
+
+function originAllowed(request: Request, env: Env): boolean {
+  const origin = request.headers.get('Origin')
+  if (!origin) return true
+  const allowed = (env.ALLOWED_ORIGINS ?? '').split(',').map((s) => s.trim())
+  if (allowed.includes(origin)) return true
+  try {
+    return new URL(origin).host === new URL(request.url).host
+  } catch {
+    return false
   }
 }
 
-type Row = { id: string; updatedAt?: number }
+export class FamilyRoom extends DurableObject<Env> {
+  private room: RoomState | null = null
 
-function reduce(db: DB, op: Op): DB {
-  if (op.action === 'replaceAll') return { ...db, [op.entity]: op.items } as DB
-  const current = db[op.entity] as unknown
-
-  /* Tekil entity (settings): nesne olarak birleştir */
-  if (!Array.isArray(current)) {
-    if (op.action === 'delete') return db
-    const patch = op.items
-      .filter(Boolean)
-      .sort((a: any, b: any) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))[0]
-    if (!patch) return db
-    const base = (current ?? {}) as Record<string, unknown>
-    if ((base.updatedAt ?? 0) > (patch.updatedAt ?? 0)) return db
-    return { ...db, [op.entity]: { ...base, ...patch } } as DB
-  }
-
-  const list = current as Row[]
-  let next: Row[]
-  if (op.action === 'delete') {
-    const ids = new Set(op.items.map((i) => i?.id))
-    next = list.filter((i) => !ids.has(i.id))
-  } else {
-    const incoming = new Map<string, Row>()
-    for (const item of op.items) {
-      if (!item || typeof item.id !== 'string') continue
-      const prev = incoming.get(item.id)
-      if (!prev || (item.updatedAt ?? 0) >= (prev.updatedAt ?? 0)) incoming.set(item.id, item)
-    }
-    const out: Row[] = []
-    const seen = new Set<string>()
-    for (const item of list) {
-      const inc = incoming.get(item.id)
-      if (inc) {
-        seen.add(item.id)
-        out.push((inc.updatedAt ?? 0) >= (item.updatedAt ?? 0) ? inc : item)
-      } else out.push(item)
-    }
-    for (const [id, item] of incoming) if (!seen.has(id)) out.push(item)
-    next = out
-  }
-  return { ...db, [op.entity]: next } as DB
-}
-
-export class FamilyRoom extends DurableObject {
-  private db: DB = emptyDB()
-  private rev = 0
-  private ops: Op[] = []
-  private persistTimer: ReturnType<typeof setTimeout> | null = null
-  private loaded = false
-
-  constructor(ctx: DurableObjectState, env: Env) {
-    super(ctx, env)
-  }
-
-  private async ensureLoaded() {
-    if (this.loaded) return
-    const row = await (this.env as Env).DB.prepare('SELECT data FROM family_state WHERE key = ?').bind('main').first()
-    if (row && typeof row.data === 'string') {
+  private async load(): Promise<RoomState> {
+    if (this.room) return this.room
+    const stored = await this.ctx.storage.get<{ rev: number; recentIds: string[] }>('meta')
+    if (stored) {
+      const entries = await this.ctx.storage.get<unknown>(ENTITY_KEYS.map((k) => `e:${k}`))
+      const db: Record<string, unknown> = {}
+      for (const k of ENTITY_KEYS) db[k] = entries.get(`e:${k}`)
+      this.room = new RoomState({ db, rev: stored.rev, recentIds: stored.recentIds })
+    } else {
+      // Eski sürüm: tüm veri D1'de tek JSON satırındaydı → bir kez taşı
+      let legacy: { db?: unknown; rev?: number } | null = null
       try {
-        const parsed = JSON.parse(row.data) as { db: DB; ops: Op[]; rev: number }
-        this.db = parsed.db ?? emptyDB()
-        this.ops = Array.isArray(parsed.ops) ? parsed.ops : []
-        this.rev = parsed.rev ?? 0
+        const row = await this.env.DB.prepare('SELECT data FROM family_state WHERE key = ?').bind('main').first()
+        if (row && typeof row.data === 'string') legacy = JSON.parse(row.data)
       } catch {
-        /* bozuk kayıt → sıfırdan başla */
+        /* tablo yok ya da bozuk kayıt */
       }
+      this.room = new RoomState(legacy)
+      await this.saveAll()
     }
-    this.loaded = true
+    return this.room
   }
 
-  private schedulePersist() {
-    if (this.persistTimer) clearTimeout(this.persistTimer)
-    this.persistTimer = setTimeout(() => {
-      this.persistTimer = null
-      void this.persist()
-    }, PERSIST_DEBOUNCE_MS)
+  private async saveAll() {
+    const room = this.room!
+    const entries: Record<string, unknown> = { meta: { rev: room.rev, recentIds: room.recentIds } }
+    for (const k of ENTITY_KEYS) entries[`e:${k}`] = room.db[k]
+    await this.ctx.storage.put(entries)
   }
 
-  private async persist() {
-    const payload = JSON.stringify({ db: this.db, ops: this.ops.slice(-MAX_OPS), rev: this.rev })
-    await (this.env as Env)
-      .DB.prepare(
-        `INSERT INTO family_state (key, data, updated_at) VALUES (?, ?, ?)
-         ON CONFLICT(key) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at`,
-      )
-      .bind('main', payload, Date.now())
-      .run()
+  /** Yalnızca değişen varlığı yaz (her değer ayrı anahtar → boyut sınırına takılmaz). */
+  private async saveEntity(entity: EntityKey) {
+    const room = this.room!
+    await this.ctx.storage.put({
+      meta: { rev: room.rev, recentIds: room.recentIds },
+      [`e:${entity}`]: room.db[entity],
+    })
+  }
+
+  private send(ws: WebSocket, msg: ServerMsg) {
+    try {
+      ws.send(JSON.stringify(msg))
+    } catch {
+      /* kapalı olabilir */
+    }
   }
 
   private broadcast(msg: ServerMsg, except?: WebSocket) {
     const text = JSON.stringify(msg)
-    const sessions = this.ctx.getWebSockets()
-    for (const ws of sessions) {
+    for (const ws of this.ctx.getWebSockets()) {
       if (ws === except) continue
+      const att = ws.deserializeAttachment() as Attachment | null
+      if (!att?.authed) continue
       try {
         ws.send(text)
       } catch {
@@ -163,47 +115,63 @@ export class FamilyRoom extends DurableObject {
     if (request.headers.get('Upgrade') !== 'websocket') {
       return new Response('FamilyOS sync: WebSocket bekleniyor', { status: 426 })
     }
-    await this.ensureLoaded()
-
     const pair = new WebSocketPair()
     const [client, server] = Object.values(pair) as [WebSocket, WebSocket]
     this.ctx.acceptWebSocket(server)
-    server.send(JSON.stringify({ type: 'snapshot', db: this.db, rev: this.rev } satisfies ServerMsg))
+    server.serializeAttachment({ authed: false, ip: request.headers.get('CF-Connecting-IP') ?? '?' } satisfies Attachment)
     return new Response(null, { status: 101, webSocket: client })
   }
 
   override async webSocketMessage(ws: WebSocket, raw: string | ArrayBuffer) {
-    await this.ensureLoaded()
+    const text = typeof raw === 'string' ? raw : new TextDecoder().decode(raw)
+    if (text.length > MAX_MESSAGE_BYTES) return ws.close(1009, 'too-large')
     let msg: ClientMsg
     try {
-      msg = JSON.parse(typeof raw === 'string' ? raw : new TextDecoder().decode(raw))
+      msg = JSON.parse(text)
     } catch {
       return
     }
+    const att = (ws.deserializeAttachment() as Attachment | null) ?? { authed: false, ip: '?' }
 
-    if (msg.type === 'ping') {
-      ws.send(JSON.stringify({ type: 'pong' } satisfies ServerMsg))
-      return
-    }
+    if (msg.type === 'ping') return this.send(ws, { type: 'pong' })
 
     if (msg.type === 'hello') {
-      ws.send(JSON.stringify({ type: 'snapshot', db: this.db, rev: this.rev } satisfies ServerMsg))
-      return
+      const code = (this.env.FAMILY_CODE ?? '').trim()
+      if (!code) {
+        this.send(ws, { type: 'error', code: 'not-configured', message: 'FAMILY_CODE tanımlı değil' })
+        return ws.close(CLOSE_AUTH, 'not-configured')
+      }
+      if (limiter.blocked(att.ip)) {
+        this.send(ws, { type: 'error', code: 'rate-limit', message: 'Çok fazla hatalı deneme' })
+        return ws.close(CLOSE_AUTH, 'rate-limit')
+      }
+      if (!safeEqual(String(msg.code ?? ''), code)) {
+        limiter.fail(att.ip)
+        this.send(ws, { type: 'error', code: 'auth', message: 'Aile kodu yanlış' })
+        return ws.close(CLOSE_AUTH, 'auth')
+      }
+      limiter.success(att.ip)
+      ws.serializeAttachment({ ...att, authed: true } satisfies Attachment)
+      const room = await this.load()
+      return this.send(ws, { type: 'snapshot', db: room.db, rev: room.rev })
     }
 
-    if (msg.type === 'op' && msg.op && typeof msg.op.entity === 'string') {
-      if (!ENTITY_KEYS.includes(msg.op.entity as EntityKey)) return
-      const op: Op = { ...msg.op, ts: Date.now() }
-      this.db = reduce(this.db, op)
-      this.ops.push(op)
-      if (this.ops.length > MAX_OPS) this.ops = this.ops.slice(-MAX_OPS)
-      this.rev += 1
-      this.broadcast({ type: 'op', op }, ws) // üreten cihaza yankılama
-      ws.send(JSON.stringify({ type: 'ack', id: op.id, rev: this.rev } satisfies ServerMsg))
-      this.schedulePersist()
-      if (op.entity === 'messages' && op.action === 'upsert') {
-        void this.pushMessages(op).catch(() => undefined)
+    if (msg.type === 'op' && att.authed) {
+      const room = await this.load()
+      const id = typeof (msg.op as any)?.id === 'string' ? (msg.op as any).id : null
+      const op = sanitizeOp(msg.op)
+      if (!op) {
+        if (id) this.send(ws, { type: 'ack', id, rev: room.rev })
+        return this.send(ws, { type: 'error', code: 'bad-op', message: 'Geçersiz değişiklik reddedildi' })
       }
+      if (room.apply(op)) {
+        await this.saveEntity(op.entity)
+        this.broadcast({ type: 'op', op }, ws)
+        if (op.entity === 'messages' && op.action === 'upsert') {
+          this.ctx.waitUntil(this.pushMessages(op).catch(() => undefined))
+        }
+      }
+      this.send(ws, { type: 'ack', id: op.id, rev: room.rev })
     }
   }
 
@@ -217,70 +185,107 @@ export class FamilyRoom extends DurableObject {
 
   /* ---------- Web Push ---------- */
   private async pushMessages(op: Op) {
-    const env = this.env as Env
+    const env = this.env
     if (!env.VAPID_PUBLIC_KEY || !env.VAPID_PRIVATE_KEY) return
     const { default: webpush } = await import('web-push')
-    webpush.setVapidDetails(
-      env.VAPID_SUBJECT ?? 'mailto:family@example.com',
-      env.VAPID_PUBLIC_KEY,
-      env.VAPID_PRIVATE_KEY,
-    )
+    webpush.setVapidDetails(env.VAPID_SUBJECT ?? 'mailto:aile@example.com', env.VAPID_PUBLIC_KEY, env.VAPID_PRIVATE_KEY)
 
     const subs = await env.DB.prepare('SELECT subscription FROM push_subs').all()
     const message = op.items[0]
     if (!message) return
-
-    const author = this.db.members.find((m) => m.id === message.fromId)
+    const room = await this.load()
+    const author = room.db.members.find((m) => m.id === message.fromId)
     const payload = JSON.stringify({
-      title: `FamilyOS · ${author?.name ?? 'Aile'}`,
+      title: `${room.db.settings.brandName || 'Aile Panosu'} · ${author?.name ?? 'Aile'}`,
       body: String(message.text ?? '').slice(0, 140),
-      url: '/',
+      url: '/?tab=chat',
     })
 
     const stale: string[] = []
-    for (const row of subs.results ?? []) {
-      try {
-        await webpush.sendNotification(JSON.parse(row.subscription as string), payload)
-      } catch (e: any) {
-        if (e?.statusCode === 404 || e?.statusCode === 410) stale.push(row.subscription as string)
-      }
-    }
+    await Promise.allSettled(
+      (subs.results ?? []).map(async (row) => {
+        try {
+          await webpush.sendNotification(JSON.parse(row.subscription as string), payload, { TTL: 3600 })
+        } catch (e: any) {
+          if (e?.statusCode === 404 || e?.statusCode === 410) stale.push(row.subscription as string)
+        }
+      }),
+    )
     for (const s of stale) {
       await env.DB.prepare('DELETE FROM push_subs WHERE subscription = ?').bind(s).run()
     }
   }
 }
 
-export default {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    const url = new URL(request.url)
+function json(body: unknown, status = 200): Response {
+  return Response.json(body, { status, headers: { ...SECURITY_HEADERS, 'Cache-Control': 'no-store' } })
+}
 
-    if (url.pathname === '/sync') {
+function checkCode(request: Request, env: Env): Response | null {
+  const code = (env.FAMILY_CODE ?? '').trim()
+  const ip = request.headers.get('CF-Connecting-IP') ?? '?'
+  if (!code) return json({ error: 'not-configured' }, 503)
+  if (limiter.blocked(ip)) return json({ error: 'rate-limit' }, 429)
+  if (!safeEqual(request.headers.get('x-family-code') ?? '', code)) {
+    limiter.fail(ip)
+    return json({ error: 'auth' }, 401)
+  }
+  limiter.success(ip)
+  return null
+}
+
+/** Statik yanıtlara güvenlik ve önbellek başlıkları ekle. */
+async function withHeaders(res: Response, path: string): Promise<Response> {
+  const out = new Response(res.body, res)
+  for (const [k, v] of Object.entries(SECURITY_HEADERS)) out.headers.set(k, v)
+  if (path.startsWith('/assets/')) out.headers.set('Cache-Control', 'public, max-age=31536000, immutable')
+  else if (path === '/sw.js' || path === '/manifest.webmanifest' || !path.includes('.')) out.headers.set('Cache-Control', 'no-cache')
+  return out
+}
+
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const url = new URL(request.url)
+    const path = url.pathname
+
+    if (path === '/sync') {
+      if (!originAllowed(request, env)) return new Response('Forbidden', { status: 403 })
       const id = env.ROOM.idFromName('family')
       return env.ROOM.get(id).fetch(request)
     }
 
-    if (url.pathname === '/push/subscribe' && request.method === 'POST') {
-      const sub = (await request.json()) as { endpoint?: string }
-      if (!sub?.endpoint) return Response.json({ error: 'endpoint gerekli' }, { status: 400 })
-      await env.DB.prepare(
-        `INSERT INTO push_subs (endpoint, subscription, created_at) VALUES (?, ?, ?)
-         ON CONFLICT(endpoint) DO UPDATE SET subscription = excluded.subscription`,
-      ).bind(sub.endpoint, JSON.stringify(sub), Date.now()).run()
-      return Response.json({ ok: true })
+    if (path === '/push/key' && request.method === 'GET') {
+      return json({ publicKey: env.VAPID_PUBLIC_KEY ?? '' })
     }
 
-    if (url.pathname === '/push/unsubscribe' && request.method === 'POST') {
-      const { endpoint } = (await request.json()) as { endpoint?: string }
-      if (endpoint) await env.DB.prepare('DELETE FROM push_subs WHERE endpoint = ?').bind(endpoint).run()
-      return Response.json({ ok: true })
+    if ((path === '/push/subscribe' || path === '/push/unsubscribe') && request.method === 'POST') {
+      const denied = checkCode(request, env)
+      if (denied) return denied
+      let body: { endpoint?: string } | null = null
+      try {
+        const text = await request.text()
+        if (text.length > 16 * 1024) return json({ error: 'too-large' }, 413)
+        body = JSON.parse(text)
+      } catch {
+        return json({ error: 'body' }, 400)
+      }
+      const endpoint = typeof body?.endpoint === 'string' ? body.endpoint : ''
+      if (!/^https:\/\//.test(endpoint)) return json({ error: 'endpoint gerekli' }, 400)
+      if (path === '/push/subscribe') {
+        await env.DB.prepare(
+          `INSERT INTO push_subs (endpoint, subscription, created_at) VALUES (?, ?, ?)
+           ON CONFLICT(endpoint) DO UPDATE SET subscription = excluded.subscription`,
+        ).bind(endpoint, JSON.stringify(body), Date.now()).run()
+      } else {
+        await env.DB.prepare('DELETE FROM push_subs WHERE endpoint = ?').bind(endpoint).run()
+      }
+      return json({ ok: true })
     }
 
-    if (url.pathname === '/health') {
-      return Response.json({ ok: true, ts: Date.now() })
-    }
+    if (path === '/health') return json({ ok: true, ts: Date.now() })
 
-    // Statik uygulama (Workers Static Assets)
-    return env.ASSETS.fetch(request)
+    // Statik uygulama (Workers Static Assets); _headers dosyası dışarı verilmez
+    if (path === '/_headers') return new Response('Bulunamadı', { status: 404 })
+    return withHeaders(await env.ASSETS.fetch(request), path)
   },
 } satisfies ExportedHandler<Env>

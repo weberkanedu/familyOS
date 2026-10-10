@@ -51,6 +51,11 @@ export function deleteEvent(id: ID) {
   dispatch({ entity: 'events', action: 'delete', items: [{ id }] })
 }
 
+/** Takvim dosyasından (.ics) gelen etkinlikleri ekler/günceller. */
+export function importEvents(items: EventItem[]) {
+  if (items.length) dispatch({ entity: 'events', action: 'upsert', items })
+}
+
 /* ---------- Görevler ---------- */
 export function saveChore(c: Partial<Chore> & { title: string }): Chore {
   const item: Chore = {
@@ -88,14 +93,28 @@ export function isChoreDoneToday(c: Chore, day = todayKey()): boolean {
   return c.doneOn === day
 }
 
-export function toggleChore(c: Chore) {
+/**
+ * Görevi bugün için tamamla / geri al. Tamamlayan kişiye 1 yıldız verilir
+ * (görev kime atanmışsa ona; atanmamışsa bu cihazın sahibine).
+ */
+export function toggleChore(c: Chore, byId?: ID) {
   const day = todayKey()
-  const done = isChoreDoneToday(c) ? undefined : day
-  dispatch({
-    entity: 'chores',
-    action: 'upsert',
-    items: [{ ...c, doneOn: done, updatedAt: now() }],
-  })
+  const stars = { ...(c.stars ?? {}) }
+  if (isChoreDoneToday(c)) {
+    if (c.doneBy) stars[c.doneBy] = Math.max(0, (stars[c.doneBy] ?? 0) - 1)
+    dispatch({ entity: 'chores', action: 'upsert', items: [{ ...c, doneOn: undefined, doneBy: undefined, stars, updatedAt: now() }] })
+    return
+  }
+  const who = c.assigneeId || byId
+  if (who) stars[who] = (stars[who] ?? 0) + 1
+  dispatch({ entity: 'chores', action: 'upsert', items: [{ ...c, doneOn: day, doneBy: who, stars, updatedAt: now() }] })
+}
+
+/** Üye başına toplam görev yıldızı */
+export function starTotals(chores: Chore[]): Map<ID, number> {
+  const out = new Map<ID, number>()
+  for (const c of chores) for (const [id, n] of Object.entries(c.stars ?? {})) out.set(id, (out.get(id) ?? 0) + n)
+  return out
 }
 
 /* ---------- Alışveriş ---------- */

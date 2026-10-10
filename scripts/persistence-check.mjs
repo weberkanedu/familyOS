@@ -97,7 +97,9 @@ ok('geri yuklemeden once Izmir', getDB().settings.city === 'Izmir')
 
 importDB(backup) // yedegi geri yukle -> Ankara donmeli
 ok(`yedek geri yuklendi (${getDB().settings.city})`, getDB().settings.city === 'Ankara')
-ok('tum veri birebir geri geldi', JSON.stringify(getDB()) === changed)
+// Geri yükleme tüm cihazlara yayılsın diye ayarların zaman damgası yenilenir; onun dışında birebir
+const withoutStamp = (db) => JSON.stringify({ ...db, settings: { ...db.settings, updatedAt: 0 } })
+ok('tum veri birebir geri geldi', withoutStamp(getDB()) === withoutStamp(JSON.parse(changed)))
 
 /* 4) bozuk depoda crash olmamali */
 console.log('4) bozuk veri kurtarma')

@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import type { DB, EntityKey } from '../types'
+import { ENTITY_KEYS } from '../types'
 import { emptyDB, normalizeDB, reduceOp } from './reducer'
 import type { Op } from '../sync/protocol'
 import { clientId } from '../lib/id'
@@ -10,6 +11,28 @@ const SAVE_DELAY = 250
 let state: DB = load()
 const listeners = new Set<() => void>()
 let saveTimer: ReturnType<typeof setTimeout> | null = null
+
+/* Depolama sağlığı: localStorage dolduysa arayüz uyarı gösterir */
+let storageFailed = false
+const healthListeners = new Set<() => void>()
+
+function setStorageFailed(v: boolean) {
+  if (storageFailed === v) return
+  storageFailed = v
+  for (const l of Array.from(healthListeners)) l()
+}
+
+/** false → bu cihazda son değişiklikler kaydedilemedi (depolama dolu). */
+export function useStorageOk(): boolean {
+  return !useSyncExternalStore(
+    (fn) => {
+      healthListeners.add(fn)
+      return () => healthListeners.delete(fn)
+    },
+    () => storageFailed,
+    () => false,
+  )
+}
 
 function load(): DB {
   try {
@@ -43,8 +66,10 @@ function writeNow() {
   }
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+    setStorageFailed(false)
   } catch {
-    /* kota dolu */
+    // Kota dolu: sessizce geçme, arayüz kullanıcıyı uyarsın
+    setStorageFailed(true)
   }
 }
 
@@ -88,29 +113,56 @@ export function dispatch(partial: Omit<Op, 'id' | 'origin' | 'ts'>): Op {
     ts: Date.now(),
   }
   applyOp(op)
-  persist()
+  try {
+    localStorage.removeItem(SEED_ONLY_KEY) // kullanıcı bir şey değiştirdi → artık örnek veri değil
+  } catch {
+    /* yoksay */
+  }
   syncEmitter.emit(op)
   return op
 }
 
-/** Gelen (uzak) op'yi uygula — yeniden yayılmaz. */
+/* İlk açılış örnek verisi: sunucuya yüklenmesin diye işaretlenir */
+const SEED_ONLY_KEY = 'familyos:seed-only'
+
+export function markSeedOnly(): void {
+  try {
+    localStorage.setItem(SEED_ONLY_KEY, '1')
+  } catch {
+    /* yoksay */
+  }
+}
+
+/** Bu cihazda örnek veri dışında gerçek aile verisi var mı? */
+export function hasLocalUserData(): boolean {
+  try {
+    if (localStorage.getItem(SEED_ONLY_KEY) === '1') return false
+  } catch {
+    /* yoksay */
+  }
+  return state.members.length > 0
+}
+
+/** Op'yi uygula ve kaydet (yerel ya da uzak) — yeniden yayılmaz. */
 export function applyOp(op: Op): void {
   state = reduceOp(state, op)
   notify()
+  persist()
 }
 
-/** Uzak snapshot (soğuk başlatma) — op geçmişinin özeti. */
 /** Test yardımcısı: bekleyen yazmayı hemen diske yazar. */
 export function writeNowForTest(): void {
   writeNow()
 }
 
+/** Uzak snapshot (soğuk başlatma) — yalnızca bu cihazı günceller. */
 export function hydrate(db: DB): void {
   state = normalizeDB(db)
   notify()
   persist()
 }
 
+/** Bu cihazdaki kopyayı sıfırlar (sunucudaki aile verisine dokunmaz). */
 export function resetDB(): void {
   hydrate(emptyDB())
 }
@@ -119,8 +171,23 @@ export function exportDB(): string {
   return JSON.stringify(state, null, 2)
 }
 
+/**
+ * Yedeği geri yükler ve TÜM cihazlara yayar (op olarak gönderilir),
+ * böylece duvar ekranı ve telefonlar da yedekteki duruma döner.
+ */
 export function importDB(json: string): void {
-  hydrate(JSON.parse(json))
+  uploadAll(normalizeDB(JSON.parse(json)))
+}
+
+/** Verilen DB'yi op olarak tüm cihazlara/sunucuya gönderir. */
+export function uploadAll(db: DB): void {
+  for (const key of ENTITY_KEYS) {
+    if (key === 'settings') {
+      dispatch({ entity: 'settings', action: 'upsert', items: [{ ...db.settings, updatedAt: Date.now() }] })
+    } else {
+      dispatch({ entity: key, action: 'replaceAll', items: db[key] as any[] })
+    }
+  }
 }
 
 /** UI sekmeleri (senkron DEĞİL — cihaz yerel). */
@@ -141,13 +208,18 @@ export const syncEmitter = {
   },
 }
 
-/** Cihaz içi çoklu sekme köprüsü (BroadcastChannel). */
+/**
+ * Cihaz içi çoklu sekme köprüsü (BroadcastChannel).
+ * clientId cihaz başına aynıdır (localStorage), bu yüzden sekmeleri ayırmak için
+ * ayrı bir sekme kimliği kullanılır.
+ */
 const channel: BroadcastChannel | null =
   typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('familyos:local') : null
+const TAB_ID = Math.random().toString(36).slice(2)
 
 export function localBroadcast(op: Op) {
   try {
-    channel?.postMessage(op)
+    channel?.postMessage({ tab: TAB_ID, op })
   } catch {
     /* yoksay */
   }
@@ -156,8 +228,8 @@ export function localBroadcast(op: Op) {
 export function onLocalBroadcast(fn: (op: Op) => void): () => void {
   if (!channel) return () => undefined
   const handler = (e: MessageEvent) => {
-    const op = e.data as Op
-    if (op && op.origin !== clientId()) fn(op)
+    const msg = e.data as { tab?: string; op?: Op } | null
+    if (msg?.op && msg.tab !== TAB_ID) fn(msg.op)
   }
   channel.addEventListener('message', handler)
   return () => channel.removeEventListener('message', handler)
