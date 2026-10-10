@@ -85,6 +85,7 @@ export function WeatherWidget({
     return (
       <>
         <div
+          data-keep-light
           className="anim-rise flex items-stretch gap-2 select-none"
           onPointerDown={swipe.onPointerDown}
           onPointerUp={swipe.onPointerUp}
@@ -99,31 +100,26 @@ export function WeatherWidget({
           style={{ background: todayStyle.bg }}
           title="Bugünün detayı"
         >
-          <div className="min-w-0 text-left">
-            <div className={cx('flex items-center gap-1 text-[10px] font-bold truncate', lightText ? 'text-white/90' : 'text-slate-600')}>
+          <div className="min-w-0 text-left flex flex-col justify-center h-full">
+            <div className={cx('flex items-center gap-1 text-[10px] font-bold leading-none', lightText ? 'text-white/90' : 'text-slate-600')}>
               <PinIcon />
-              <span className="max-w-[96px] truncate">{city}</span>
+              <span className="max-w-[110px] truncate">{city}</span>
               {locations.length > 1 && <span className="opacity-75">{locationIndex + 1}/{locations.length}</span>}
             </div>
-            {/* Günün en yüksek/düşük değerleri (diğer gün kartlarıyla aynı düzen) */}
-            <div className="flex items-end gap-1 mt-0.5">
+            {/* Büyük rakam: ŞU ANKİ sıcaklık; günün en yüksek/düşüğü küçük */}
+            <div className="flex items-end gap-1.5 mt-1">
               <span className={cx('text-[38px] font-extrabold leading-none tabular-nums tracking-tight drop-shadow-sm', lightText ? 'text-white' : 'text-slate-900')}>
-                {today ? `${today.max}°` : now ? `${now.temp}°` : '—'}
+                {now ? `${now.temp}°` : today ? `${today.max}°` : '—'}
               </span>
               {today && (
-                <span className={cx('text-[14px] font-bold mb-1 tabular-nums', lightText ? 'text-white/85' : 'text-slate-500')}>
-                  /{today.min}°
+                <span className={cx('text-[12px] font-bold mb-1 tabular-nums leading-tight', lightText ? 'text-white/85' : 'text-slate-600')}>
+                  ↑{today.max}° ↓{today.min}°
                 </span>
               )}
             </div>
-            <div className={cx('text-[11px] font-bold mt-0.5 truncate max-w-[130px]', lightText ? 'text-white/95' : 'text-slate-700')}>
-              {now ? wmoLabel(now.weatherCode) : loading ? 'yükleniyor…' : error ? 'veri yok' : '—'}
+            <div className={cx('text-[11px] font-bold mt-1 leading-none truncate max-w-[130px]', lightText ? 'text-white/95' : 'text-slate-700')}>
+              {now ? `${wmoLabel(now.weatherCode)} · hissedilen ${now.feelsLike}°` : loading ? 'yükleniyor…' : error ? 'veri yok' : '—'}
             </div>
-            {now && (
-              <div className={cx('text-[10px] font-bold tabular-nums', lightText ? 'text-white/80' : 'text-slate-500')}>
-                Şu an {now.temp}° · hissedilen {now.feelsLike}°
-              </div>
-            )}
           </div>
           <WeatherArt code={now?.weatherCode ?? 2} isDay={now?.isDay ?? true} className="w-[104px] h-[86px] shrink-0 -mr-1" />
         </button>
@@ -153,7 +149,7 @@ export function WeatherWidget({
                     <div className={cx('text-[9px] font-bold tabular-nums', t ? 'text-white/75' : 'text-slate-500')}>
                       {fmtShort(d.date)}
                     </div>
-                    <WeatherArt code={d.weatherCode} className="w-full flex-1 my-0.5" />
+                    <WeatherArt code={d.weatherCode} className="w-full h-[28px] shrink-0" />
                     <div className={cx('text-[14px] font-extrabold tabular-nums leading-none', t ? 'text-white drop-shadow-sm' : 'text-slate-900')}>
                       {d.max}°
                     </div>
@@ -182,7 +178,7 @@ export function WeatherWidget({
 
   /* ============ TAM GENİŞLİK: detaylı bugün + günler ============ */
   return (
-    <div className="anim-rise grid gap-3 lg:grid-cols-[minmax(320px,1.15fr)_1fr]">
+    <div data-keep-light className="anim-rise grid gap-3 lg:grid-cols-[minmax(320px,1.15fr)_1fr]">
       {/* ---- Bugün (Seattle tarzı) ---- */}
       <div className="relative overflow-hidden rounded-2xl text-white shadow-[0_16px_44px_-26px_rgba(15,23,42,0.6)] min-h-[300px]">
         {now ? <WeatherScene code={now.weatherCode} isDay={now.isDay} /> : <div className="absolute inset-0" style={{ background: todayStyle.bg }} />}
@@ -332,6 +328,7 @@ function DayDetail({
       <div className="absolute inset-0 bg-slate-900/45 backdrop-blur-sm animate-fade-in" />
       <div
         onClick={(e) => e.stopPropagation()}
+        data-keep-light
         className="relative w-full max-w-md rounded-3xl overflow-hidden shadow-kiosk animate-pop my-auto"
         style={{ background: bg }}
       >

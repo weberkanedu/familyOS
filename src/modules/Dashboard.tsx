@@ -8,7 +8,11 @@ import { isChoreDueToday, isChoreDoneToday, toggleChore } from '../state/actions
 import type { DB } from '../types'
 import { MEAL_SLOTS } from '../types'
 import type { TabKey } from '../state/store'
-import { getDeviceOwner } from '../sync/config'
+import { getDeviceOwner, useDeviceOwner } from '../sync/config'
+import { useClock } from '../lib/hooks'
+import { greetingFor, seasonEmoji, specialDaysFor } from '../lib/specialDays'
+import { Confetti, SpecialDayBanner } from '../components/Celebrate'
+import { NextUp } from '../components/NextUp'
 
 function eventStartKey(e: { start: string; allDay: boolean }): string {
   return e.allDay ? e.start.slice(0, 10) : dateKey(new Date(e.start))
@@ -60,10 +64,15 @@ export function Dashboard({
     [db.events, today],
   )
 
-  const dueChores = useMemo(
-    () => db.chores.filter((c) => isChoreDueToday(c, today)),
-    [db.chores, today],
-  )
+  const owner = useDeviceOwner()
+  // Telefonda önce bu cihazın sahibinin görevleri
+  const dueChores = useMemo(() => {
+    const list = db.chores.filter((c) => isChoreDueToday(c, today))
+    if (kiosk || !owner) return list
+    const rank = (c: (typeof list)[number]) => (c.assigneeId === owner ? 0 : !c.assigneeId ? 1 : 2)
+    return [...list].sort((a, b) => rank(a) - rank(b))
+  }, [db.chores, today, kiosk, owner])
+  const ownerName = !kiosk && owner ? db.members.find((m) => m.id === owner)?.name : undefined
   const doneCount = dueChores.filter((c) => isChoreDoneToday(c, today)).length
 
   const pendingShopping = db.shopping.filter((s) => !s.done)
@@ -71,34 +80,31 @@ export function Dashboard({
   const recentMsgs = db.messages.slice(-3).reverse()
 
 
-  const hour = new Date().getHours()
-  const dow = new Date().getDay()
-  const greeting =
-    dow === 5
-      ? hour < 11
-        ? 'Cumanız mübarek olsun'
-        : hour < 18
-          ? 'Cumanız Mübarek Olsun'
-          : 'Cumanız mübarek olsun'
-      : dow === 6 || dow === 0
-        ? 'İyi haftalar'
-        : hour < 11
-          ? 'Günaydın'
-          : hour < 18
-            ? 'İyi günler'
-            : 'İyi akşamlar'
+  const clock = useClock(60_000)
+  const greeting = greetingFor(clock)
+  const celebrate = db.settings.celebrations !== false
+  const specials = useMemo(
+    () => (celebrate ? specialDaysFor(clock, db.members) : []),
+    [celebrate, db.members, today],
+  )
 
   const SPAN: Record<number, string> = { 3: 'col-span-3', 4: 'col-span-4', 6: 'col-span-6', 12: 'col-span-12' }
-  const grid = kiosk ? 'grid grid-cols-12 gap-5 items-stretch' : 'space-y-4'
+  // Telefonda tek sütun; görevler en üstte (order ile)
+  const grid = kiosk ? 'grid grid-cols-12 gap-5 items-stretch' : 'flex flex-col gap-4'
   const span = (n: number) => (kiosk ? cx(SPAN[n] ?? '', 'h-full') : 'h-full')
 
   return (
     <div className="space-y-5">
+      {specials.some((d) => d.confetti) && <Confetti />}
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
           <h1 className={cx('font-display tracking-tight text-slate-900', kiosk ? 'text-[42px] leading-tight' : 'text-2xl')}>
             {greeting}
+            {celebrate && <span className={cx('ml-2 align-middle', kiosk ? 'text-3xl' : 'text-xl')}>{seasonEmoji(clock)}</span>}
           </h1>
+          <div className={cx('font-bold text-slate-500 -mt-0.5', kiosk ? 'text-lg' : 'text-sm')}>
+            {ownerName ? `${ownerName}, işte bugünün` : db.settings.familyName}
+          </div>
           <div className="flex items-center gap-2 mt-2 flex-wrap">
             <StatChip
               icon={<CalendarBlankIcon className="w-4 h-4 text-violet-600" weight="duotone" />}
@@ -152,8 +158,15 @@ export function Dashboard({
         </div>
       </div>
 
-      {/* Hava widget'ı: mobilde tam genişlik, kiosk'ta üst bantta */}
-      {!kiosk && <WeatherWidget {...weather} />}
+      <SpecialDayBanner days={specials} members={db.members} kiosk={kiosk} />
+
+      {/* Telefonda: sıradaki etkinlik + küçük hava şeridi (kiosk'ta üst bantta) */}
+      {!kiosk && <NextUp db={db} kiosk={false} />}
+      {!kiosk && (
+        <div className="-mx-4 px-4 overflow-x-auto no-scrollbar">
+          <WeatherWidget {...weather} compact />
+        </div>
+      )}
 
       <div className={grid}>
         {/* Günün akışı */}
@@ -173,7 +186,11 @@ export function Dashboard({
             ) : (
               <ul className="space-y-2.5">
                 {todaysEvents.map((e) => (
-                  <li key={e.id} className="flex items-start gap-3 rounded-xl bg-slate-50 border border-slate-100 p-3">
+                  <li
+                    key={e.id}
+                    className="flex items-start gap-3 rounded-xl bg-slate-50 border border-slate-100 p-3"
+                    style={{ borderLeft: `5px solid ${memberOf.get(e.memberIds[0] ?? '')?.color ?? '#94a3b8'}` }}
+                  >
                     <div className="text-center shrink-0 w-16">
                       <div className="text-xs font-bold text-slate-400 uppercase">
                         {e.allDay ? 'Tüm gün' : fmtTime(new Date(e.start))}
@@ -211,11 +228,11 @@ export function Dashboard({
         </div>
 
         {/* Görevler */}
-        <div className={span(4)}>
+        <div className={cx(span(4), !kiosk && 'order-first')}>
           <Reveal delay={140} className="h-full">
           <GlassCard className="p-5 h-full hover-lift">
             <SectionTitle
-              title={`Görevler ${doneCount}/${dueChores.length}`}
+              title={`${ownerName ? 'Görevlerim' : 'Görevler'} ${doneCount}/${dueChores.length}`}
               action={
                 <button onClick={() => onTab('chores')} className="text-sm font-semibold text-brand-600 flex items-center">
                   Tümü <CaretRightIcon className="w-4 h-4" />
@@ -238,6 +255,7 @@ export function Dashboard({
                           'w-full flex items-center gap-3 rounded-xl border p-3 text-left transition-colors touch-manipulation',
                           done ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200 hover:bg-slate-50',
                         )}
+                        style={{ borderLeft: `5px solid ${m?.color ?? '#cbd5e1'}` }}
                       >
                         <span
                           className={cx(
@@ -282,7 +300,7 @@ export function Dashboard({
                 <ul className="space-y-2">
                   {pendingShopping.slice(0, kiosk ? 5 : 4).map((s) => (
                     <li key={s.id} className="flex items-center gap-3 rounded-xl bg-white/45 border border-white/60 px-3 py-2.5">
-                      <ColorDot color={s.done ? '#22c55e' : '#94a3b8'} />
+                      <ColorDot color={memberOf.get(s.addedById)?.color ?? '#94a3b8'} />
                       <span className="flex-1 font-bold truncate">{s.text}</span>
                       <Chip>{s.category}</Chip>
                       <Avatar member={memberOf.get(s.addedById)} size="sm" />

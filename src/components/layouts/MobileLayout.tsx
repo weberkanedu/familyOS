@@ -12,6 +12,7 @@ import { uiBus } from '../../state/uiBus'
 import { MessageFlash } from '../IdleScreen'
 import { themeById } from '../../lib/themes'
 import { useDeviceOwner } from '../../sync/config'
+import { useTextZoom } from '../../lib/display'
 
 const SYNC_TONE: Record<SyncStatus, string> = {
   live: 'bg-emerald-500',
@@ -41,6 +42,7 @@ export function MobileLayout({
 }) {
   const now = useClock(15_000)
   const owner = useDeviceOwner()
+  const zoom = useTextZoom()
   const [fabOpen, setFabOpen] = useState(false)
   const bottom = NAV.filter((n) => n.inBottomBar)
   const current = NAV.find((n) => n.key === tab)
@@ -58,9 +60,10 @@ export function MobileLayout({
     <div className="min-h-screen flex flex-col mesh-bg text-slate-900" data-theme={themeById(db.settings.theme).id}>
       <header className="sticky top-0 z-30 bg-white/60 backdrop-blur-xl border-b border-white/60 h-14 flex items-center justify-between px-4 gap-3">
         <div className="flex items-center gap-2.5 min-w-0">
-          <span className="font-display text-[17px] tracking-tight text-brand-700">{db.settings.brandName || 'Aile Panosu'}</span>
-          <span className="text-slate-300 font-bold">·</span>
-          <span className="font-semibold text-slate-600 truncate">{current?.label ?? 'Ana Sayfa'}</span>
+          {/* Uzun aile adı tek satırda kalsın; etkin sekme alttaki menüde zaten belli */}
+          <span className="font-display text-[17px] tracking-tight text-brand-600 truncate" title={current?.label}>
+            {db.settings.brandName || 'Aile Panosu'}
+          </span>
         </div>
         <div className="flex items-center gap-3 shrink-0">
           <div className="text-right leading-tight">
@@ -83,7 +86,9 @@ export function MobileLayout({
         </div>
       </header>
 
-      <main className="flex-1 w-full max-w-3xl mx-auto px-4 pt-4 pb-32">{children}</main>
+      <main className="flex-1 w-full max-w-3xl mx-auto px-4 pt-4 pb-32">
+        <div style={{ zoom }}>{children}</div>
+      </main>
 
       {/* Hızlı ekleme */}
       {fabOpen && (

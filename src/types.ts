@@ -11,6 +11,8 @@ export interface Member {
   order: number
   /** Kişi fotoğrafı (data URL) — varsa emoji yerine kullanılır */
   photo?: string
+  /** Doğum günü (YYYY-MM-DD) — o gün ekranda kutlama */
+  birthday?: string
   updatedAt: number
 }
 
@@ -157,6 +159,8 @@ export interface SchoolLesson {
 
 export type AppMode = 'auto' | 'kiosk' | 'mobile'
 
+export type NightMode = 'auto' | 'off' | 'always'
+
 /** Bildirim sesi tercihi */
 export type SoundMode = 'off' | 'all' | 'wall'
 
@@ -189,6 +193,13 @@ export interface Settings {
   savedLocations?: SavedLocation[]
   /** Sol üstteki aile fotoğrafı (data URL) */
   familyPhoto?: string
+  /** Gece modu: auto = saat aralığında koyu tema */
+  nightMode?: NightMode
+  /** Gece modunun başladığı / bittiği saat (0-23) */
+  nightFrom?: number
+  nightTo?: number
+  /** Doğum günü / bayram süslemeleri */
+  celebrations?: boolean
   updatedAt: number
 }
 

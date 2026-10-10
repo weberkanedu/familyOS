@@ -357,3 +357,80 @@ svg {
   transition: background-color 0.4s ease;
 }
 
+
+/* ============================================================
+   Gece modu (html.night) — Ayarlar → Ekran & Kiosk
+   Açık renk yardımcı sınıfları koyu karşılıklarıyla değiştirilir.
+   Kendi renkli zemini olan alanlar (hava kartları) [data-keep-light] ile korunur.
+   ============================================================ */
+/* [data-theme] kendi değişkenlerini tanımladığı için ona da uygulanır */
+html.night,
+html.night [data-theme] {
+  color-scheme: dark;
+  --bg-base: #0b1020;
+  --mesh-1: rgba(30, 58, 138, 0.35);
+  --mesh-2: rgba(76, 29, 149, 0.22);
+  --mesh-3: rgba(15, 23, 42, 0.6);
+  --mesh-4: rgba(6, 78, 59, 0.18);
+  --night-surface: 24 32 54;
+}
+html.night body { background: #0b1020; color: #e2e8f0; }
+html.night .kiosk-bg,
+html.night .mesh-bg { color: #e2e8f0; }
+
+/* Yüzeyler */
+html.night :is(.bg-white, .bg-white\/90, .bg-white\/85, .bg-white\/80, .bg-white\/70, .bg-white\/65):not([data-keep-light] *) {
+  background-color: rgb(var(--night-surface) / 0.92);
+}
+html.night :is(.bg-white\/60, .bg-white\/55, .bg-white\/50, .bg-white\/45):not([data-keep-light] *) {
+  background-color: rgb(var(--night-surface) / 0.7);
+}
+html.night :is(.bg-slate-50, .bg-slate-100):not([data-keep-light] *) { background-color: rgba(51, 65, 85, 0.45); }
+html.night .bg-slate-200:not([data-keep-light] *) { background-color: rgba(71, 85, 105, 0.55); }
+html.night :is(.bg-emerald-50, .bg-emerald-50\/70):not([data-keep-light] *) { background-color: rgba(6, 95, 70, 0.35); }
+html.night .bg-amber-50:not([data-keep-light] *) { background-color: rgba(120, 53, 15, 0.35); }
+html.night .bg-rose-50:not([data-keep-light] *) { background-color: rgba(136, 19, 55, 0.35); }
+html.night .bg-brand-50:not([data-keep-light] *) { background-color: rgb(var(--brand-500) / 0.2); }
+html.night :is(.glass-soft, .glass-strong):not([data-keep-light] *) {
+  background: rgb(var(--night-surface) / 0.72);
+  border-color: rgba(255, 255, 255, 0.07);
+  box-shadow: 0 16px 44px -26px rgba(0, 0, 0, 0.8);
+}
+html.night header.bg-white\/45,
+html.night header.bg-white\/60 { background-color: rgba(11, 16, 32, 0.6); border-color: rgba(255, 255, 255, 0.06); }
+
+/* Yazılar */
+html.night :is(.text-slate-900, .text-slate-800):not([data-keep-light] *) { color: #f1f5f9; }
+html.night .text-slate-700:not([data-keep-light] *) { color: #e2e8f0; }
+html.night .text-slate-600:not([data-keep-light] *) { color: #cbd5e1; }
+html.night .text-slate-500:not([data-keep-light] *) { color: #94a3b8; }
+html.night .text-slate-400:not([data-keep-light] *) { color: #7c8aa3; }
+html.night .text-slate-300:not([data-keep-light] *) { color: #475569; }
+html.night .text-brand-600:not([data-keep-light] *),
+html.night .text-brand-700:not([data-keep-light] *) { color: rgb(var(--brand-400)); }
+
+/* Kenarlıklar */
+html.night :is(.border-slate-100, .border-slate-200, .border-slate-200\/80, .border-slate-300, .border-white\/60, .border-white\/70):not([data-keep-light] *) {
+  border-color: rgba(148, 163, 184, 0.16);
+}
+html.night .ring-white:not([data-keep-light] *) { --tw-ring-color: #182036; }
+html.night :is(input, select, textarea):not([data-keep-light] *) { color: #f1f5f9; }
+html.night ::placeholder { color: #64748b; }
+
+/* ============================================================
+   Konfeti (doğum günü / bayram) — kısa süreli, saf CSS
+   ============================================================ */
+@keyframes confetti-fall {
+  0% { transform: translate3d(0, -10vh, 0) rotate(0deg); opacity: 1; }
+  100% { transform: translate3d(var(--dx, 0), 105vh, 0) rotate(720deg); opacity: 0.9; }
+}
+.confetti-piece {
+  position: fixed;
+  top: 0;
+  width: 10px;
+  height: 14px;
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 90;
+  animation: confetti-fall var(--dur, 4s) cubic-bezier(0.3, 0.6, 0.5, 1) var(--delay, 0s) both;
+}

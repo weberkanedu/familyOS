@@ -15,6 +15,8 @@ import type { DB, SavedLocation } from '../../types'
 import type { TabKey } from '../../state/store'
 import { IdleScreen, MessageFlash } from '../IdleScreen'
 import type { Message } from '../../types'
+import { NextUp } from '../NextUp'
+import { useTextZoom } from '../../lib/display'
 
 const SYNC_TONE: Record<SyncStatus, string> = {
   live: 'bg-emerald-500',
@@ -49,6 +51,7 @@ export function KioskLayout({
   const collapsed = !!db.settings.navCollapsed
   const toggleNav = () => saveSettings({ navCollapsed: !collapsed })
   const theme = themeById(db.settings.theme)
+  const zoom = useTextZoom()
 
   return (
     <div className="h-screen flex overflow-hidden kiosk-bg text-slate-900" data-theme={theme.id}>
@@ -79,7 +82,8 @@ export function KioskLayout({
               </div>
               {!collapsed && (
                 <div className="leading-tight min-w-0">
-                  <div className="font-display text-[17px] leading-tight truncate">{db.settings.brandName || 'Aile Panosu'}</div>
+                  {/* Uzun aile adları kesilmesin: iki satıra kadar */}
+                  <div className="font-display text-[15px] leading-tight line-clamp-2 break-words">{db.settings.brandName || 'Aile Panosu'}</div>
                   <div className="text-[11px] text-white/60 truncate">{db.settings.city || HOME.city}</div>
                 </div>
               )}
@@ -187,19 +191,17 @@ export function KioskLayout({
           </div>
         </header>
 
-        <main key={tab} className="flex-1 overflow-y-auto p-6 xl:p-8">{children}</main>
+        <main key={tab} className="flex-1 overflow-y-auto p-6 xl:p-8">
+          <div style={{ zoom }}>
+            <NextUp db={db} kiosk />
+            {children}
+          </div>
+        </main>
       </div>
 
       {flash && <MessageFlash message={flash} member={db.members.find((m) => m.id === flash.fromId)} onDismiss={onFlashDismiss} />}
       {idle && (
-        <IdleScreen
-          weather={weather.data}
-          city={db.settings.city || HOME.city}
-          messages={db.messages}
-          members={db.members}
-          words={db.words}
-          onWake={wake}
-        />
+        <IdleScreen db={db} weather={weather.data} city={db.settings.city || HOME.city} onWake={wake} />
       )}
     </div>
   )

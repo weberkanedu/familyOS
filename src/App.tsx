@@ -8,6 +8,7 @@ import { MobileLayout } from './components/layouts/MobileLayout'
 import { Dashboard } from './modules/Dashboard'
 import { SyncNotice } from './components/SyncNotice'
 import { usePhotoDiet } from './lib/usePhotoDiet'
+import { useNightMode } from './lib/display'
 import { isLocalMessage, selectLocation } from './state/actions'
 import { beep, vibrate } from './lib/sound'
 import { uiBus } from './state/uiBus'
@@ -51,6 +52,7 @@ export default function App() {
   const wide = useMediaQuery('(min-width: 1024px)')
 
   usePhotoDiet(db)
+  useNightMode(db.settings)
 
   /* Diğer sekmeleri boşta önceden indir (çevrimdışıyken de açılabilsinler) */
   useEffect(() => {

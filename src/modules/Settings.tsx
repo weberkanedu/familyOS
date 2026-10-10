@@ -11,7 +11,8 @@ import { getDeviceOwner, getFamilyCode, setDeviceOwner, setFamilyCode } from '..
 import { PRESYNC_KEY } from '../sync/useFamilySync'
 import { THEMES } from '../lib/themes'
 import { HOME } from '../lib/location'
-import type { AppMode, DB, Member, Role, SoundMode } from '../types'
+import type { AppMode, DB, Member, NightMode, Role, SoundMode } from '../types'
+import { TEXT_SCALES, getTextScale, setTextScale, type TextScale } from '../lib/display'
 
 const COLORS = ['#f97362', '#4f6ef7', '#22c55e', '#f59e0b', '#a855f7', '#06b6d4', '#ec4899', '#84cc16']
 
@@ -35,6 +36,7 @@ interface MemberDraft {
   emoji: string
   role: Role
   photo?: string
+  birthday?: string
 }
 
 export function Settings({ db, kiosk, sync }: { db: DB; kiosk: boolean; sync: { status: string; url: string | null } }) {
@@ -54,6 +56,7 @@ export function Settings({ db, kiosk, sync }: { db: DB; kiosk: boolean; sync: { 
   const [codeDraft, setCodeDraft] = useState(getFamilyCode)
   const [codeNote, setCodeNote] = useState<string | null>(null)
   const [owner, setOwner] = useState(getDeviceOwner)
+  const [textScale, setTextScaleState] = useState<TextScale>(getTextScale)
 
   useEffect(() => {
     void permissionState().then((p) => setPushState(p))
@@ -247,7 +250,7 @@ export function Settings({ db, kiosk, sync }: { db: DB; kiosk: boolean; sync: { 
                   variant="soft"
                   size="sm"
                   onClick={() => {
-                    setMd({ id: m.id, name: m.name, color: m.color, emoji: m.emoji, role: m.role, photo: m.photo })
+                    setMd({ id: m.id, name: m.name, color: m.color, emoji: m.emoji, role: m.role, photo: m.photo, birthday: m.birthday })
                     setPhotoBusy(false)
                   }}
                 >
@@ -289,7 +292,7 @@ export function Settings({ db, kiosk, sync }: { db: DB; kiosk: boolean; sync: { 
               <Btn
                 variant="soft"
                 size="sm"
-                onClick={() => setMd({ id: m.id, name: m.name, color: m.color, emoji: m.emoji, role: m.role })}
+                onClick={() => setMd({ id: m.id, name: m.name, color: m.color, emoji: m.emoji, role: m.role, photo: m.photo, birthday: m.birthday })}
               >
                 Düzenle
               </Btn>
@@ -421,6 +424,84 @@ export function Settings({ db, kiosk, sync }: { db: DB; kiosk: boolean; sync: { 
             Aile mesajı yazdığında duvar ekranı "bip" der ve ekranı uyandırır; böylece mesaj kaçmaz.
             Telefonunuz zaten bildirim gösterdiği için <b>Sadece duvarda</b> genelde yeterlidir.
           </p>
+        </div>
+
+        <div>
+          <span className="block text-sm font-semibold text-slate-600 mb-1.5">Gece modu (koyu, loş ekran)</span>
+          <div className="grid grid-cols-3 gap-2">
+            {([
+              { v: 'auto', t: 'Otomatik', d: 'Belirli saatlerde' },
+              { v: 'off', t: 'Kapalı', d: 'Hep aydınlık' },
+              { v: 'always', t: 'Hep koyu', d: 'Gece gündüz' },
+            ] as { v: NightMode; t: string; d: string }[]).map((o) => (
+              <button
+                key={o.v}
+                type="button"
+                onClick={() => saveSettings({ nightMode: o.v })}
+                className={cx(
+                  'rounded-2xl border-2 p-3 text-center transition-colors touch-manipulation',
+                  (s.nightMode ?? 'auto') === o.v ? 'border-brand-500 bg-brand-50' : 'border-slate-200 bg-white hover:border-slate-300',
+                )}
+              >
+                <div className={cx('font-extrabold text-sm', (s.nightMode ?? 'auto') === o.v ? 'text-brand-600' : 'text-slate-700')}>{o.t}</div>
+                <div className="text-[11px] text-slate-400 font-semibold mt-0.5">{o.d}</div>
+              </button>
+            ))}
+          </div>
+          {(s.nightMode ?? 'auto') === 'auto' && (
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              <Field label="Başlangıç">
+                <Select value={s.nightFrom ?? 22} onChange={(e) => saveSettings({ nightFrom: Number(e.target.value) })}>
+                  {Array.from({ length: 24 }, (_, h) => (
+                    <option key={h} value={h}>
+                      {String(h).padStart(2, '0')}:00
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="Bitiş">
+                <Select value={s.nightTo ?? 7} onChange={(e) => saveSettings({ nightTo: Number(e.target.value) })}>
+                  {Array.from({ length: 24 }, (_, h) => (
+                    <option key={h} value={h}>
+                      {String(h).padStart(2, '0')}:00
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </div>
+          )}
+        </div>
+
+        <div>
+          <span className="block text-sm font-semibold text-slate-600 mb-1.5">Yazı boyutu (yalnızca bu cihaz)</span>
+          <div className="grid grid-cols-3 gap-2">
+            {TEXT_SCALES.map((o) => (
+              <button
+                key={o.value}
+                type="button"
+                onClick={() => {
+                  setTextScaleState(o.value)
+                  setTextScale(o.value)
+                }}
+                className={cx(
+                  'rounded-2xl border-2 p-3 text-center font-extrabold transition-colors touch-manipulation',
+                  textScale === o.value ? 'border-brand-500 bg-brand-50 text-brand-600' : 'border-slate-200 bg-white text-slate-700',
+                )}
+                style={{ fontSize: `${14 * o.zoom}px` }}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-slate-400 font-medium">Duvar tabletini uzaktan okumak için “Büyük” önerilir.</p>
+        </div>
+
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="font-semibold text-slate-700">Kutlamalar 🎉</div>
+            <div className="text-xs text-slate-400">Doğum günü, bayram ve mevsim süslemeleri, konfeti</div>
+          </div>
+          <Toggle checked={s.celebrations !== false} onChange={(v) => saveSettings({ celebrations: v })} />
         </div>
       </Section>
 
@@ -755,6 +836,9 @@ export function Settings({ db, kiosk, sync }: { db: DB; kiosk: boolean; sync: { 
                 ))}
               </div>
             </div>
+            <Field label="Doğum günü (o gün ekranda kutlama 🎂)">
+              <Input type="date" value={md.birthday ?? ''} onChange={(e) => setMd({ ...md, birthday: e.target.value || undefined })} />
+            </Field>
             <Field label="Rol">
               <Select value={md.role} onChange={(e) => setMd({ ...md, role: e.target.value as Role })}>
                 <option value="parent">Ebeveyn</option>

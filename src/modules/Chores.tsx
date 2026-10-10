@@ -146,7 +146,11 @@ export function Chores({ db, kiosk }: { db: DB; kiosk: boolean }) {
             const doneToday = isChoreDoneToday(c, today)
             const m = memberOf.get(c.assigneeId ?? '')
             return (
-              <Card key={c.id} className={cx('p-4 flex items-center gap-3 transition-colors', doneToday && 'bg-emerald-50/70 border-emerald-200')}>
+              <Card
+                key={c.id}
+                className={cx('p-4 flex items-center gap-3 transition-colors', doneToday && 'bg-emerald-50/70 border-emerald-200')}
+                style={{ borderLeft: `6px solid ${m?.color ?? '#cbd5e1'}` }}
+              >
                 <button
                   type="button"
                   onClick={() => toggleChore(c, owner || undefined)}

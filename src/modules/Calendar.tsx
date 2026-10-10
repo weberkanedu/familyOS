@@ -124,7 +124,11 @@ export function Calendar({ db, kiosk }: { db: DB; kiosk: boolean }) {
   /** Düz fonksiyon çağrısı (JSX bileşeni olsaydı her render'da yeniden mount olurdu). */
   const eventPill = (e: EventItem, compact = false) => {
     const colors = e.memberIds.map((id) => memberOf.get(id)?.color).filter(Boolean)
-    const bg = colors[0] ?? '#4f6ef7'
+    // Birden fazla kişi: renk şeritleri (kimin etkinliği olduğu uzaktan anlaşılsın)
+    const bg =
+      colors.length > 1
+        ? `linear-gradient(90deg, ${colors.map((c, i) => `${c} ${(i / colors.length) * 100}% ${((i + 1) / colors.length) * 100}%`).join(', ')})`
+        : (colors[0] ?? '#4f6ef7')
     return (
       <button
         key={e.id}
@@ -137,7 +141,7 @@ export function Calendar({ db, kiosk }: { db: DB; kiosk: boolean }) {
           'w-full text-left rounded-lg px-2 py-1 text-white font-semibold truncate transition-transform active:scale-[0.98] touch-manipulation',
           compact ? 'text-[11px] leading-tight' : 'text-sm py-1.5',
         )}
-        style={{ backgroundColor: bg }}
+        style={{ background: bg, textShadow: '0 1px 2px rgba(0,0,0,0.35)' }}
         title={e.title}
       >
         {!e.allDay && <span className="opacity-80 mr-1">{fmtTime(new Date(e.start))}</span>}
