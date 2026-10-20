@@ -8,7 +8,6 @@ import {
   GraduationCapIcon,
   PlayIcon,
   ShoppingCartIcon,
-  TelevisionSimpleIcon,
 } from '@phosphor-icons/react'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { cx } from '../ui'
@@ -18,30 +17,34 @@ import { useClock } from '../../lib/hooks'
 import { dateKey, fmtDayName, fmtMonth, fmtTime, pad, todayKey, relativeTime } from '../../lib/time'
 import { greetingFor } from '../../lib/specialDays'
 import { wmoLabel, type WeatherData } from '../../lib/openMeteo'
-import { openTvApp, tvApps } from '../../lib/tv'
+import { HOME } from '../../lib/location'
+import { themeById } from '../../lib/themes'
+import { nextPrayer, PRAYER_LABELS, PRAYER_ORDER, type PrayerKey } from '../../lib/prayer'
+import { openTvApp, tvApps, type TvApp } from '../../lib/tv'
 import { isChoreDoneToday, isChoreDueToday } from '../../state/actions'
 import { syncLabel, type SyncStatus } from '../../sync/useFamilySync'
-import { MEAL_SLOTS, type DB, type Message } from '../../types'
+import { MEAL_SLOTS, type DB, type Member, type Message } from '../../types'
 import type { TabKey } from '../../state/store'
 
 /**
- * TV ana ekranı (Apple TV / Matinee çizgisi): koyu zemin, üstte saat-hava hapı,
- * ortada odaklanılan kutunun "vitrini", altta iki sıra kutu. Kutuya OK → uygulama ya da sayfa.
- * Sayfalar sade bir çerçevede açılır; Geri → ana ekran.
+ * TV ana ekranı (Apple TV / Matinee çizgisi): koyu zemin, üstte saat-hava ve namaz vakitleri,
+ * ortada vitrin (solda başlık, sağda odaklanılan bölümün detay paneli), altta iki sıra kutu.
+ * Kutuya OK → uygulama ya da sayfa. Sayfalar sade bir çerçevede açılır; Geri → ana ekran.
  */
 
 type SectionKey = Exclude<TabKey, 'home'>
-type FocusKey = 'tivimate' | 'youtube' | SectionKey
 
 const SECTIONS: { key: SectionKey; label: string; icon: typeof GearIcon; tint: string }[] = [
-  { key: 'calendar', label: 'Takvim', icon: CalendarBlankIcon, tint: '#8b5cf6' },
-  { key: 'chores', label: 'Görevler', icon: CheckSquareIcon, tint: '#f59e0b' },
-  { key: 'shopping', label: 'Alışveriş', icon: ShoppingCartIcon, tint: '#10b981' },
-  { key: 'meals', label: 'Yemekler', icon: ForkKnifeIcon, tint: '#f43f5e' },
-  { key: 'learn', label: 'Öğrenme', icon: GraduationCapIcon, tint: '#0ea5e9' },
-  { key: 'chat', label: 'Mesajlar', icon: ChatCircleIcon, tint: '#6366f1' },
-  { key: 'settings', label: 'Ayarlar', icon: GearIcon, tint: '#64748b' },
+  { key: 'calendar', label: 'Takvim', icon: CalendarBlankIcon, tint: '#a78bfa' },
+  { key: 'chores', label: 'Görevler', icon: CheckSquareIcon, tint: '#fbbf24' },
+  { key: 'shopping', label: 'Alışveriş', icon: ShoppingCartIcon, tint: '#34d399' },
+  { key: 'meals', label: 'Yemekler', icon: ForkKnifeIcon, tint: '#fb7185' },
+  { key: 'learn', label: 'Öğrenme', icon: GraduationCapIcon, tint: '#38bdf8' },
+  { key: 'chat', label: 'Mesajlar', icon: ChatCircleIcon, tint: '#818cf8' },
+  { key: 'settings', label: 'Ayarlar', icon: GearIcon, tint: '#94a3b8' },
 ]
+
+const APP_CAPTION: Record<TvApp['id'], string> = { tivimate: 'Canlı TV', youtube: 'Reklamsız video' }
 
 const SYNC_DOT: Record<SyncStatus, string> = {
   live: 'bg-emerald-400',
@@ -78,25 +81,20 @@ export function TvLayout({
   return (
     <div className="tv-root relative h-screen overflow-hidden text-white flex flex-col">
       <header className="shrink-0 flex items-center justify-between gap-6 px-16 pt-9 pb-4">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 min-w-0">
           {section && (
             <button
               type="button"
               onClick={() => onTab('home')}
-              className="tv-pill h-12 pl-3 pr-5 flex items-center gap-2 text-[17px] font-bold"
+              className="tv-pill h-12 pl-3 pr-5 flex items-center gap-2 text-[17px] font-bold shrink-0"
             >
               <CaretLeftIcon className="w-5 h-5" weight="bold" /> Ana ekran
             </button>
           )}
-          <StatusPill now={now} weather={weather} city={city} />
+          <StatusPill now={now} weather={weather} city={city} status={status} />
+          {section && <div className="text-[26px] font-display tracking-wide ml-2 truncate">{section.label}</div>}
         </div>
-        <div className="flex items-center gap-3">
-          {section && <div className="text-[28px] font-display tracking-wide mr-2">{section.label}</div>}
-          <div className="tv-pill h-12 px-5 flex items-center gap-2.5 text-[16px] font-semibold text-white/80">
-            <span className={cx('w-2.5 h-2.5 rounded-full', SYNC_DOT[status])} title={syncLabel(status)} />
-            {greetingFor(now)}, {db.settings.familyName || 'Ailem'}
-          </div>
-        </div>
+        <PrayerPill now={now} lat={db.settings.lat ?? HOME.lat} lon={db.settings.lon ?? HOME.lon} />
       </header>
 
       {section ? (
@@ -106,7 +104,7 @@ export function TvLayout({
         </main>
       ) : (
         <>
-          <TvHome db={db} now={now} weather={weather} onTab={onTab} />
+          <TvHome db={db} now={now} weather={weather} status={status} onTab={onTab} />
           {/* Ana ekranda da senkron uyarıları / aile kodu penceresi */}
           <div className="absolute left-16 right-16 bottom-4">{children}</div>
         </>
@@ -117,9 +115,9 @@ export function TvLayout({
   )
 }
 
-function StatusPill({ now, weather, city }: { now: Date; weather: WeatherData | null; city: string }) {
+function StatusPill({ now, weather, city, status }: { now: Date; weather: WeatherData | null; city: string; status: SyncStatus }) {
   return (
-    <div className="tv-pill h-12 px-5 flex items-center gap-4 text-[16px] font-semibold text-white/80">
+    <div className="tv-pill h-12 px-5 flex items-center gap-4 text-[16px] font-semibold text-white/80 shrink-0">
       <span className="text-[22px] font-extrabold text-white tabular-nums">
         {pad(now.getHours())}:{pad(now.getMinutes())}
       </span>
@@ -135,36 +133,81 @@ function StatusPill({ now, weather, city }: { now: Date; weather: WeatherData | 
           </span>
         </>
       )}
+      <span className={cx('w-2 h-2 rounded-full', SYNC_DOT[status])} title={syncLabel(status)} />
+    </div>
+  )
+}
+
+const PRAYER_TO: Record<PrayerKey, string> = {
+  imsak: 'İmsaka',
+  gunes: 'Güneşe',
+  ogle: 'Öğleye',
+  ikindi: 'İkindiye',
+  aksam: 'Akşama',
+  yatsi: 'Yatsıya',
+}
+
+/** Namaz vakitleri: altı vakit yan yana, sıradaki vurgulu + kalan süre. */
+function PrayerPill({ now, lat, lon }: { now: Date; lat: number; lon: number }) {
+  const day = dateKey(now)
+  const minute = Math.floor(now.getTime() / 60_000)
+  const next = useMemo(() => nextPrayer(now, lat, lon), [day, minute, lat, lon])
+  const left = Math.max(0, Math.round((next.at.getTime() - now.getTime()) / 60_000))
+  const leftText = left >= 60 ? `${Math.floor(left / 60)} sa ${left % 60} dk` : `${left} dk`
+
+  // Yatsıdan sonra sıradaki yarının İmsak'ı: bugünün listesinde vurgu yok
+  const nextIsToday = dateKey(next.at) === day
+
+  return (
+    <div className="tv-pill h-12 pl-1.5 pr-4 flex items-center gap-0.5 shrink-0" data-keep-light>
+      {PRAYER_ORDER.map((k) => {
+        const isNext = nextIsToday && k === next.key
+        const past = next.today[k].getTime() <= now.getTime()
+        return (
+          <div
+            key={k}
+            className="h-10 w-[60px] rounded-full flex flex-col items-center justify-center leading-none"
+            style={isNext ? { background: '#fff' } : undefined}
+          >
+            <span className="text-[10px] font-bold" style={{ color: isNext ? '#64748b' : 'rgba(255,255,255,0.45)' }}>
+              {PRAYER_LABELS[k]}
+            </span>
+            <span
+              className="mt-1 text-[15px] font-extrabold tabular-nums"
+              style={{ color: isNext ? '#0f172a' : past ? 'rgba(255,255,255,0.38)' : 'rgba(255,255,255,0.88)' }}
+            >
+              {fmtTime(next.today[k])}
+            </span>
+          </div>
+        )
+      })}
+      <span className="ml-2.5 text-[13px] font-semibold text-white/55 whitespace-nowrap">
+        {PRAYER_TO[next.key]} {leftText}
+      </span>
     </div>
   )
 }
 
 /* ---------------- Ana ekran ---------------- */
 
-type Hero = {
-  eyebrow: string
-  title: string
-  sub?: string
-  lines?: { left: string; text: string; right?: string }[]
-  card: ReactNode
-}
-
 function TvHome({
   db,
   now,
   weather,
+  status,
   onTab,
 }: {
   db: DB
   now: Date
   weather: WeatherData | null
+  status: SyncStatus
   onTab: (t: TabKey) => void
 }) {
   const apps = useMemo(tvApps, [])
-  const [focus, setFocus] = useState<FocusKey | null>(null)
+  const [focus, setFocus] = useState<SectionKey | null>(null)
   const firstRef = useRef<HTMLButtonElement>(null)
 
-  // Açılışta ve TiviMate/YouTube'dan dönünce odak ilk kutuda (kumanda hemen çalışsın)
+  // Açılışta ve Home tuşunda odak ilk kutuda (kumanda hemen çalışsın)
   useEffect(() => {
     const f = () => {
       if (!document.querySelector('[role="dialog"]')) firstRef.current?.focus({ preventScroll: true })
@@ -174,85 +217,68 @@ function TvHome({
     return () => window.removeEventListener('familyos:home', f)
   }, [])
 
-  const summary = useSummary(db, now)
-  const hero = heroFor(focus, summary, weather, now)
+  const s = useSummary(db, now)
   const badges: Partial<Record<SectionKey, number>> = {
-    calendar: summary.events.length,
-    chores: summary.choresLeft.length,
-    shopping: summary.shopping.length,
+    calendar: s.events.length,
+    chores: s.choresLeft.length,
+    shopping: s.shopping.length,
   }
 
   return (
-    <div className="flex-1 flex flex-col px-16 pb-8 min-h-0">
-      {/* Vitrin */}
-      <section className="flex-1 min-h-0 flex items-center justify-between gap-10">
-        <div className="min-w-0 flex-1 max-w-[640px]">
-          <div className="text-[14px] font-bold uppercase tracking-[0.18em] text-white/45">{hero.eyebrow}</div>
-          <h1 className="mt-2 text-[60px] leading-[1.05] font-extrabold tracking-tight line-clamp-2 break-words">{hero.title}</h1>
-          {hero.sub && <div className="mt-3 text-[21px] font-semibold text-white/70 line-clamp-1">{hero.sub}</div>}
-          {hero.lines && hero.lines.length > 0 && (
-            <ul className="mt-5 space-y-2">
-              {hero.lines.slice(0, 4).map((l, i) => (
-                <li key={i} className="flex items-center gap-4 text-[18px]">
-                  <span className="w-16 shrink-0 font-bold tabular-nums text-white/50">{l.left}</span>
-                  <span className="flex-1 min-w-0 truncate font-semibold text-white/85">{l.text}</span>
-                  {l.right && <span className="shrink-0">{l.right}</span>}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-        <div className="shrink-0 w-[380px] h-[214px] rounded-[28px] overflow-hidden">{hero.card}</div>
+    <div className="flex-1 flex flex-col px-16 pb-7 min-h-0">
+      {/* Vitrin: uygulama seçiliyken / odak yokken günün özeti, bölüm seçiliyken detay */}
+      <section className="flex-1 min-h-0 flex items-center gap-10">
+        {focus ? <SectionHero k={focus} s={s} db={db} status={status} /> : <DayHero s={s} now={now} weather={weather} />}
       </section>
 
       {/* Uygulamalar */}
       {apps.length > 0 && (
         <Row label="Uygulamalar">
           {apps.map((a, i) => (
-            <button
-              key={a.id}
-              ref={i === 0 ? firstRef : undefined}
-              type="button"
-              className="tv-tile w-[232px] h-[108px]"
-              onFocus={() => setFocus(a.id)}
-              onClick={() => openTvApp(a.id)}
-              aria-label={a.label}
-            >
-              <AppArt id={a.id} />
-            </button>
+            <div key={a.id} className="flex flex-col gap-2">
+              <button
+                ref={i === 0 ? firstRef : undefined}
+                type="button"
+                className="tv-tile w-[196px] h-[80px]"
+                onFocus={() => setFocus(null)}
+                onClick={() => openTvApp(a.id)}
+                aria-label={a.label}
+              >
+                <AppArt id={a.id} />
+              </button>
+              <span className="text-[13px] font-semibold text-white/50 pl-1">
+                {a.label} · {APP_CAPTION[a.id]}
+              </span>
+            </div>
           ))}
         </Row>
       )}
 
       {/* Pano */}
       <Row label="Pano">
-        {SECTIONS.map((s, i) => {
-          const Icon = s.icon
-          const badge = badges[s.key]
+        {SECTIONS.map((sec, i) => {
+          const Icon = sec.icon
+          const badge = badges[sec.key]
           return (
             <button
-              key={s.key}
+              key={sec.key}
               ref={apps.length === 0 && i === 0 ? firstRef : undefined}
               type="button"
-              className="tv-tile tv-tile-soft w-[148px] h-[96px] flex flex-col items-start justify-between p-3.5 text-left"
-              onFocus={() => setFocus(s.key)}
-              onClick={() => onTab(s.key)}
+              className="tv-tile tv-tile-soft w-[138px] h-[80px] flex flex-col items-start justify-between px-3.5 py-3 text-left"
+              onFocus={() => setFocus(sec.key)}
+              onClick={() => onTab(sec.key)}
             >
-              <div className="w-full flex items-start justify-between">
-                <Icon weight="fill" className="w-8 h-8" style={{ color: s.tint }} />
-                {!!badge && (
-                  <span className="min-w-7 h-7 px-2 rounded-full bg-white/15 grid place-items-center text-[14px] font-extrabold tabular-nums">
-                    {badge}
-                  </span>
-                )}
+              <div className="w-full flex items-center justify-between">
+                <Icon weight="duotone" className="w-7 h-7" style={{ color: sec.tint }} />
+                {!!badge && <span className="text-[13px] font-extrabold tabular-nums text-white/55">{badge}</span>}
               </div>
-              <span className="text-[16px] font-bold">{s.label}</span>
+              <span className="text-[15px] font-semibold text-white/90">{sec.label}</span>
             </button>
           )
         })}
       </Row>
 
-      <div className="mt-3 flex justify-end gap-5 text-[13px] font-semibold text-white/40">
+      <div className="mt-2 flex justify-end gap-5 text-[13px] font-semibold text-white/35">
         <span>
           <Key>◀ ▶</Key> gez
         </span>
@@ -269,172 +295,388 @@ function TvHome({
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="mt-5">
-      <div className="mb-2.5 text-[15px] font-bold text-white/50">{label}</div>
+    <div className="mt-4">
+      <div className="mb-2 text-[14px] font-bold text-white/45">{label}</div>
       <div className="flex gap-3.5">{children}</div>
     </div>
   )
 }
 
 function Key({ children }: { children: ReactNode }) {
-  return <span className="inline-block mr-1.5 px-1.5 py-0.5 rounded-md border border-white/20 text-white/60">{children}</span>
+  return <span className="inline-block mr-1.5 px-1.5 py-0.5 rounded-md border border-white/15 text-white/55">{children}</span>
 }
 
-function AppArt({ id, big = false }: { id: 'tivimate' | 'youtube'; big?: boolean }) {
-  if (id === 'youtube') {
-    return (
-      <div className="w-full h-full grid place-items-center" style={{ background: '#fff' }} data-keep-light>
-        <div className="flex items-center gap-2.5">
-          <span className={cx('rounded-xl bg-[#ff0033] grid place-items-center', big ? 'w-20 h-14' : 'w-11 h-8')}>
-            <PlayIcon weight="fill" className={cx('text-white', big ? 'w-8 h-8' : 'w-5 h-5')} />
-          </span>
-          <span className={cx('font-extrabold tracking-tight text-[#0f0f0f]', big ? 'text-[44px]' : 'text-[26px]')}>YouTube</span>
-        </div>
-      </div>
-    )
-  }
+function AppArt({ id }: { id: TvApp['id'] }) {
   return (
     <div className="w-full h-full grid place-items-center" style={{ background: '#fff' }} data-keep-light>
-      <span className={cx('font-extrabold tracking-tight', big ? 'text-[56px]' : 'text-[34px]')}>
-        <span className="text-[#1e88e5]">tivi</span>
-        <span className="text-[#0d3c61]">mate</span>
-      </span>
+      {id === 'youtube' ? (
+        <div className="flex items-center gap-2">
+          <span className="w-9 h-[26px] rounded-lg grid place-items-center" style={{ background: '#ff0033' }}>
+            <PlayIcon weight="fill" className="w-4 h-4" style={{ color: '#fff' }} />
+          </span>
+          <span className="text-[22px] font-extrabold tracking-tight" style={{ color: '#0f0f0f' }}>
+            YouTube
+          </span>
+        </div>
+      ) : (
+        <span className="text-[28px] font-extrabold tracking-tight">
+          <span style={{ color: '#1e88e5' }}>tivi</span>
+          <span style={{ color: '#0d3c61' }}>mate</span>
+        </span>
+      )}
     </div>
   )
 }
 
-function SectionArt({ k, value, caption }: { k: SectionKey; value?: string | number; caption?: string }) {
-  const s = SECTIONS.find((x) => x.key === k)!
-  const Icon = s.icon
+/* ---------------- Vitrin ---------------- */
+
+/** Sol: başlık bloğu; sağ: detay paneli. */
+function Hero({ eyebrow, title, sub, panel }: { eyebrow: string; title: string; sub?: ReactNode; panel: ReactNode }) {
   return (
-    <div className="w-full h-full p-7 flex flex-col justify-between" style={{ background: `${s.tint}33` }}>
-      <Icon weight="fill" className="w-14 h-14" style={{ color: s.tint }} />
-      <div className="flex items-end justify-between gap-4">
-        {value !== undefined && <span className="text-[64px] leading-none font-extrabold tabular-nums">{value}</span>}
-        {caption && <span className="text-[18px] font-bold text-white/70 text-right">{caption}</span>}
+    <>
+      <div className="w-[420px] shrink-0">
+        <div className="text-[13px] font-bold uppercase tracking-[0.18em] text-white/45">{eyebrow}</div>
+        <h1 className="mt-2 text-[46px] leading-[1.08] font-extrabold tracking-tight line-clamp-2 break-words">{title}</h1>
+        {sub && <div className="mt-3 text-[19px] font-semibold text-white/65 line-clamp-2">{sub}</div>}
       </div>
-    </div>
+      <div className="flex-1 min-w-0 h-[248px] rounded-[26px] bg-white/[0.05] border border-white/[0.08] p-6 overflow-hidden">{panel}</div>
+    </>
+  )
+}
+
+function DayHero({ s, now, weather }: { s: Summary; now: Date; weather: WeatherData | null }) {
+  const next = s.upcoming[0]
+  return (
+    <Hero
+      eyebrow={next ? 'Sıradaki' : greetingFor(now)}
+      title={next ? next.title : 'Bugün sakin'}
+      sub={
+        next
+          ? [next.allDay ? 'Tüm gün' : fmtTime(new Date(next.start)), next.location, s.emojis(next.memberIds)].filter(Boolean).join(' · ')
+          : `${s.choresLeft.length} görev · ${s.shopping.length} alışveriş`
+      }
+      panel={
+        weather ? (
+          <div className="h-full flex items-center gap-8">
+            <div className="flex items-center gap-4 shrink-0">
+              <WeatherIcon code={weather.now.weatherCode} isDay={weather.now.isDay} className="w-24 h-24" />
+              <div>
+                <div className="text-[60px] leading-none font-extrabold tabular-nums">{weather.now.temp}°</div>
+                <div className="mt-2 text-[16px] font-bold text-white/70">{wmoLabel(weather.now.weatherCode)}</div>
+                {weather.days[0] && (
+                  <div className="text-[15px] font-semibold text-white/50">
+                    ↑{weather.days[0].max}° ↓{weather.days[0].min}°
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex-1 grid grid-cols-4 gap-2.5">
+              {weather.days.slice(1, 5).map((d) => (
+                <div key={d.date} className="rounded-2xl bg-white/[0.05] py-3 flex flex-col items-center gap-1">
+                  <span className="text-[13px] font-bold text-white/55">{fmtDayName(d.date, true)}</span>
+                  <WeatherIcon code={d.weatherCode} className="w-10 h-10" />
+                  <span className="text-[15px] font-extrabold tabular-nums">{d.max}°</span>
+                  <span className="text-[12px] font-semibold text-white/45 tabular-nums">{d.min}°</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <Muted>Hava durumu yükleniyor…</Muted>
+        )
+      }
+    />
+  )
+}
+
+function SectionHero({ k, s, db, status }: { k: SectionKey; s: Summary; db: DB; status: SyncStatus }) {
+  switch (k) {
+    case 'calendar': {
+      const next = s.upcoming[0]
+      return (
+        <Hero
+          eyebrow="Takvim · Bugün"
+          title={s.events.length ? `${s.events.length} etkinlik` : 'Bugün boş'}
+          sub={next ? `Sıradaki ${next.allDay ? 'tüm gün' : fmtTime(new Date(next.start))} · ${next.title}` : s.tomorrow.length ? `Yarın ${s.tomorrow.length} etkinlik var` : undefined}
+          panel={
+            s.events.length ? (
+              <ul className="space-y-2.5">
+                {s.events.slice(0, 4).map((e) => {
+                  const done = !e.allDay && new Date(e.end ?? e.start).getTime() < s.now
+                  return (
+                    <li key={e.id} className={cx('flex items-center gap-4', done && 'opacity-40')}>
+                      <span className="w-14 shrink-0 text-[17px] font-extrabold tabular-nums text-white/70">
+                        {e.allDay ? 'Gün' : fmtTime(new Date(e.start))}
+                      </span>
+                      <span className="w-1 h-10 rounded-full shrink-0" style={{ background: s.member.get(e.memberIds[0])?.color ?? '#64748b' }} />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[18px] font-bold truncate">{e.title}</div>
+                        {e.location && <div className="text-[13px] font-semibold text-white/45 truncate">{e.location}</div>}
+                      </div>
+                      <Avatars ids={e.memberIds} member={s.member} />
+                    </li>
+                  )
+                })}
+                {/* Yer kaldıysa yarın */}
+                {s.events.length < 3 && s.tomorrow.length > 0 && (
+                  <li className="pt-2">
+                    <div className="text-[12px] font-bold uppercase tracking-wider text-violet-300/80">Yarın</div>
+                    <ul className="mt-1.5 space-y-1">
+                      {s.tomorrow.slice(0, 3 - s.events.length).map((e) => (
+                        <li key={e.id} className="flex items-center gap-4 text-[16px] text-white/70">
+                          <span className="w-14 shrink-0 font-bold tabular-nums">{e.allDay ? 'Gün' : fmtTime(new Date(e.start))}</span>
+                          <span className="flex-1 min-w-0 truncate font-semibold">{e.title}</span>
+                          <span className="shrink-0">{s.emojis(e.memberIds)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </li>
+                )}
+              </ul>
+            ) : (
+              <Muted>
+                {s.tomorrow.length
+                  ? `Yarın: ${s.tomorrow.map((e) => e.title).slice(0, 3).join(', ')}`
+                  : 'Bugün ve yarın için etkinlik yok.'}
+              </Muted>
+            )
+          }
+        />
+      )
+    }
+    case 'chores': {
+      const done = s.dueCount - s.choresLeft.length
+      const pct = s.dueCount ? Math.round((done / s.dueCount) * 100) : 0
+      return (
+        <Hero
+          eyebrow="Görevler · Bugün"
+          title={s.choresLeft.length ? `${s.choresLeft.length} görev kaldı` : s.dueCount ? 'Hepsi tamam 🎉' : 'Bugün görev yok'}
+          sub={s.dueCount ? `${done}/${s.dueCount} tamamlandı` : undefined}
+          panel={
+            <div className="h-full flex flex-col">
+              <div className="h-2.5 rounded-full bg-white/10 overflow-hidden">
+                <div className="h-full rounded-full bg-amber-400" style={{ width: `${pct}%` }} />
+              </div>
+              <ul className="mt-4 grid grid-cols-2 gap-x-6 gap-y-2.5">
+                {s.choresLeft.slice(0, 8).map((c) => (
+                  <li key={c.id} className="flex items-center gap-3 min-w-0">
+                    <span className="w-5 h-5 rounded-md border-2 border-white/30 shrink-0" />
+                    <span className="flex-1 min-w-0 truncate text-[17px] font-semibold">{c.title}</span>
+                    <Avatars ids={[c.assigneeId]} member={s.member} />
+                  </li>
+                ))}
+              </ul>
+              {s.choresLeft.length > 8 && <div className="mt-auto text-[13px] text-white/45">+{s.choresLeft.length - 8} görev daha</div>}
+            </div>
+          }
+        />
+      )
+    }
+    case 'shopping': {
+      const groups = new Map<string, typeof s.shopping>()
+      for (const i of s.shopping) groups.set(i.category, [...(groups.get(i.category) ?? []), i])
+      return (
+        <Hero
+          eyebrow="Alışveriş listesi"
+          title={s.shopping.length ? `${s.shopping.length} ürün` : 'Liste boş'}
+          sub={s.shopping.length ? [...groups.keys()].join(' · ') : 'Telefondan ekleyince burada görünür'}
+          panel={
+            s.shopping.length ? (
+              <div className="grid grid-cols-3 gap-5">
+                {[...groups].slice(0, 6).map(([cat, items]) => (
+                  <div key={cat} className="min-w-0">
+                    <div className="text-[12px] font-bold uppercase tracking-wider text-emerald-300/80">{cat}</div>
+                    <ul className="mt-1.5 space-y-1">
+                      {items.slice(0, 4).map((i) => (
+                        <li key={i.id} className="text-[17px] font-semibold truncate">
+                          {i.text}
+                          {i.qty && <span className="text-white/45"> · {i.qty}</span>}
+                        </li>
+                      ))}
+                      {items.length > 4 && <li className="text-[13px] text-white/45">+{items.length - 4}</li>}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <Muted>Alınacak bir şey yok.</Muted>
+            )
+          }
+        />
+      )
+    }
+    case 'meals': {
+      const dinner = s.meals.find((m) => m.key === 'dinner')?.title
+      return (
+        <Hero
+          eyebrow="Yemekler · Bugün"
+          title={dinner ?? 'Menü girilmedi'}
+          sub={dinner ? 'Akşam yemeği' : undefined}
+          panel={
+            <div className="h-full flex flex-col">
+              <div className="grid grid-cols-3 gap-3">
+                {s.meals.map((m) => (
+                  <div key={m.key} className="rounded-2xl bg-white/[0.05] p-4 min-h-[112px]">
+                    <div className="text-[12px] font-bold uppercase tracking-wider text-rose-300/80">{m.label}</div>
+                    <div className={cx('mt-2 text-[19px] font-bold line-clamp-2', !m.title && 'text-white/30')}>{m.title ?? '—'}</div>
+                  </div>
+                ))}
+              </div>
+              {s.tomorrowDinner && (
+                <div className="mt-auto text-[15px] font-semibold text-white/55">
+                  Yarın akşam: <span className="text-white/85">{s.tomorrowDinner}</span>
+                </div>
+              )}
+            </div>
+          }
+        />
+      )
+    }
+    case 'learn': {
+      const w = s.word
+      return (
+        <Hero
+          eyebrow={w ? `Öğrenme · ${w.deck}` : 'Öğrenme'}
+          title={w ? 'Günün kelimesi' : 'Kelime yok'}
+          sub={s.dueWords ? `${s.dueWords} kelime tekrar bekliyor` : `${db.words.length} kelime`}
+          panel={
+            w ? (
+              <div className="h-full flex flex-col justify-center">
+                <div className="text-[40px] leading-tight font-extrabold tracking-tight truncate">{w.term}</div>
+                <div className="mt-2 text-[21px] font-semibold text-sky-200/90 line-clamp-2">{w.meaning}</div>
+                {w.example && <div className="mt-3 text-[16px] italic text-white/50 line-clamp-2">“{w.example}”</div>}
+              </div>
+            ) : (
+              <Muted>Öğrenme sekmesinden kelime ekleyebilirsiniz.</Muted>
+            )
+          }
+        />
+      )
+    }
+    case 'chat': {
+      const last = s.lastMsgs[0]
+      return (
+        <Hero
+          eyebrow="Mesajlar"
+          title={last ? `${s.member.get(last.fromId)?.name ?? 'Birisi'} yazdı` : 'Henüz mesaj yok'}
+          sub={last ? relativeTime(last.at) : 'Telefondan duvara not bırakın'}
+          panel={
+            s.lastMsgs.length ? (
+              <ul className="space-y-3">
+                {s.lastMsgs.map((m) => {
+                  const from = s.member.get(m.fromId)
+                  return (
+                    <li key={m.id} className="flex items-start gap-3">
+                      <Avatar m={from} size={36} />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[13px] font-bold text-white/50">
+                          {from?.name ?? '?'} · {relativeTime(m.at)}
+                        </div>
+                        <div className="mt-0.5 inline-block max-w-full rounded-2xl rounded-tl-md bg-white/[0.08] px-4 py-2 text-[17px] font-semibold line-clamp-2">
+                          {m.text}
+                        </div>
+                      </div>
+                    </li>
+                  )
+                })}
+              </ul>
+            ) : (
+              <Muted>Mesaj geldiğinde burada görünür.</Muted>
+            )
+          }
+        />
+      )
+    }
+    case 'settings':
+      return (
+        <Hero
+          eyebrow="Ayarlar"
+          title="Ayarlar"
+          sub="Tema, konum, ekran ve aile üyeleri"
+          panel={
+            <dl className="grid grid-cols-2 gap-x-8 gap-y-4">
+              {[
+                ['Tema', themeById(db.settings.theme).label],
+                ['Konum', db.settings.city || HOME.city],
+                ['Senkron', syncLabel(status)],
+                ['Aile', `${db.members.length} kişi`],
+              ].map(([k, v]) => (
+                <div key={k}>
+                  <dt className="text-[12px] font-bold uppercase tracking-wider text-white/45">{k}</dt>
+                  <dd className="mt-1 text-[19px] font-bold truncate">{v}</dd>
+                </div>
+              ))}
+            </dl>
+          }
+        />
+      )
+  }
+}
+
+function Muted({ children }: { children: ReactNode }) {
+  return <div className="h-full grid place-items-center text-center text-[18px] font-semibold text-white/45">{children}</div>
+}
+
+function Avatar({ m, size = 30 }: { m?: Member; size?: number }) {
+  return (
+    <span
+      className="rounded-full grid place-items-center shrink-0 overflow-hidden"
+      style={{ width: size, height: size, background: m?.color ?? '#475569', fontSize: size * 0.55 }}
+    >
+      {m?.photo ? <img src={m.photo} alt="" className="w-full h-full object-cover" /> : (m?.emoji ?? '?')}
+    </span>
+  )
+}
+
+function Avatars({ ids, member }: { ids: (string | undefined)[]; member: Map<string, Member> }) {
+  const list = ids.filter((id): id is string => !!id && member.has(id))
+  if (!list.length) return null
+  return (
+    <span className="flex -space-x-2 shrink-0">
+      {list.slice(0, 3).map((id) => (
+        <Avatar key={id} m={member.get(id)} />
+      ))}
+    </span>
   )
 }
 
 /* ---------------- Veri ---------------- */
 
+type Summary = ReturnType<typeof useSummary>
+
 function useSummary(db: DB, now: Date) {
   const today = todayKey()
   const minute = Math.floor(now.getTime() / 60_000)
   return useMemo(() => {
+    const t = now.getTime()
+    const tomorrowKey = dateKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1))
     const member = new Map(db.members.map((m) => [m.id, m]))
     const emojis = (ids: (string | undefined)[]) => ids.map((id) => (id ? member.get(id)?.emoji : '')).join('')
-    const events = db.events
-      .filter((e) => (e.allDay ? e.start.slice(0, 10) : dateKey(new Date(e.start))) === today)
-      .sort((a, b) => (a.allDay === b.allDay ? a.start.localeCompare(b.start) : a.allDay ? -1 : 1))
-    const t = now.getTime()
-    const upcoming = events.filter((e) => e.allDay || new Date(e.end ?? e.start).getTime() >= t - 15 * 60_000)
+    const dayOf = (e: DB['events'][number]) => (e.allDay ? e.start.slice(0, 10) : dateKey(new Date(e.start)))
+    const byStart = (a: DB['events'][number], b: DB['events'][number]) =>
+      a.allDay === b.allDay ? a.start.localeCompare(b.start) : a.allDay ? -1 : 1
+    const events = db.events.filter((e) => dayOf(e) === today).sort(byStart)
     const due = db.chores.filter((c) => isChoreDueToday(c, today))
-    const choresLeft = due.filter((c) => !isChoreDoneToday(c, today))
     return {
-      events,
-      upcoming,
-      dueCount: due.length,
-      choresLeft,
-      shopping: db.shopping.filter((s) => !s.done),
-      meals: MEAL_SLOTS.map((s) => ({ label: s.label, title: db.meals.find((m) => m.date === today && m.slot === s.key)?.title })),
-      word: [...db.words].sort((a, b) => a.dueAt - b.dueAt)[0],
-      lastMsg: db.messages[db.messages.length - 1],
+      now: t,
       member,
       emojis,
+      events,
+      upcoming: events.filter((e) => e.allDay || new Date(e.end ?? e.start).getTime() >= t - 15 * 60_000),
+      tomorrow: db.events.filter((e) => dayOf(e) === tomorrowKey).sort(byStart),
+      dueCount: due.length,
+      choresLeft: due.filter((c) => !isChoreDoneToday(c, today)),
+      shopping: db.shopping.filter((i) => !i.done),
+      meals: MEAL_SLOTS.map((sl) => ({
+        key: sl.key,
+        label: sl.label,
+        title: db.meals.find((m) => m.date === today && m.slot === sl.key)?.title,
+      })),
+      tomorrowDinner: db.meals.find((m) => m.date === tomorrowKey && m.slot === 'dinner')?.title,
+      word: [...db.words].sort((a, b) => a.dueAt - b.dueAt)[0],
+      dueWords: db.words.filter((w) => w.dueAt <= t).length,
+      lastMsgs: db.messages.slice(-3).reverse(),
     }
     // dakikada bir yeniden hesaplanır
   }, [db, today, minute])
-}
-
-function heroFor(focus: FocusKey | null, s: ReturnType<typeof useSummary>, weather: WeatherData | null, now: Date): Hero {
-  const evLines = (list: typeof s.events) =>
-    list.map((e) => ({ left: e.allDay ? 'Gün' : fmtTime(new Date(e.start)), text: e.title, right: s.emojis(e.memberIds) }))
-
-  switch (focus) {
-    case 'tivimate':
-      return { eyebrow: 'Uygulama', title: 'TiviMate', sub: 'Canlı TV · OK ile aç', card: <AppArt id="tivimate" big /> }
-    case 'youtube':
-      return { eyebrow: 'Uygulama', title: 'YouTube', sub: 'Reklamsız · OK ile aç', card: <AppArt id="youtube" big /> }
-    case 'calendar': {
-      const next = s.upcoming[0]
-      return {
-        eyebrow: 'Takvim · Bugün',
-        title: next ? next.title : 'Bugün boş',
-        sub: next ? [next.allDay ? 'Tüm gün' : fmtTime(new Date(next.start)), next.location, s.emojis(next.memberIds)].filter(Boolean).join(' · ') : 'Takvimde bugün için etkinlik yok',
-        lines: evLines(s.upcoming.slice(1)),
-        card: <SectionArt k="calendar" value={s.events.length} caption="etkinlik" />,
-      }
-    }
-    case 'chores':
-      return {
-        eyebrow: 'Görevler · Bugün',
-        title: s.choresLeft.length ? `${s.choresLeft.length} görev kaldı` : s.dueCount ? 'Hepsi tamam 🎉' : 'Bugün görev yok',
-        lines: s.choresLeft.map((c) => ({ left: '•', text: c.title, right: s.emojis([c.assigneeId]) })),
-        card: <SectionArt k="chores" value={`${s.dueCount - s.choresLeft.length}/${s.dueCount}`} caption="tamamlandı" />,
-      }
-    case 'shopping':
-      return {
-        eyebrow: 'Alışveriş listesi',
-        title: s.shopping.length ? `${s.shopping.length} ürün` : 'Liste boş',
-        lines: s.shopping.map((i) => ({ left: '•', text: i.qty ? `${i.text} (${i.qty})` : i.text, right: i.category })),
-        card: <SectionArt k="shopping" value={s.shopping.length} caption="alınacak" />,
-      }
-    case 'meals': {
-      const dinner = s.meals.find((m) => m.label === 'Akşam')?.title
-      return {
-        eyebrow: 'Yemekler · Bugün',
-        title: dinner ?? 'Menü girilmedi',
-        sub: dinner ? 'Akşam yemeği' : undefined,
-        lines: s.meals.filter((m) => m.title).map((m) => ({ left: m.label, text: m.title! })),
-        card: <SectionArt k="meals" />,
-      }
-    }
-    case 'learn':
-      return {
-        eyebrow: s.word ? `Öğrenme · ${s.word.deck}` : 'Öğrenme',
-        title: s.word?.term ?? 'Kelime yok',
-        sub: s.word?.meaning,
-        card: <SectionArt k="learn" />,
-      }
-    case 'chat': {
-      const m = s.lastMsg
-      const from = m ? s.member.get(m.fromId) : undefined
-      return {
-        eyebrow: 'Mesajlar',
-        title: m ? m.text : 'Henüz mesaj yok',
-        sub: m ? `${from?.emoji ?? ''} ${from?.name ?? ''} · ${relativeTime(m.at)}` : undefined,
-        card: <SectionArt k="chat" />,
-      }
-    }
-    case 'settings':
-      return { eyebrow: 'Ayarlar', title: 'Ayarlar', sub: 'Tema, konum, ekran, aile', card: <SectionArt k="settings" /> }
-    default: {
-      // Odak yok: selam + sıradaki etkinlik, sağda hava
-      const next = s.upcoming[0]
-      return {
-        eyebrow: next ? 'Sıradaki' : greetingFor(now),
-        title: next ? next.title : 'Bugün sakin',
-        sub: next ? (next.allDay ? 'Tüm gün' : fmtTime(new Date(next.start))) : undefined,
-        lines: evLines(s.upcoming.slice(1)),
-        card: <WeatherArtCard weather={weather} />,
-      }
-    }
-  }
-}
-
-function WeatherArtCard({ weather }: { weather: WeatherData | null }) {
-  if (!weather) return <div className="w-full h-full bg-white/5" />
-  const d = weather.days[0]
-  return (
-    <div className="w-full h-full p-7 flex items-center justify-between bg-gradient-to-br from-sky-500/30 to-indigo-500/20">
-      <div>
-        <div className="text-[72px] leading-none font-extrabold tabular-nums">{weather.now.temp}°</div>
-        <div className="mt-2 text-[18px] font-bold text-white/75">{wmoLabel(weather.now.weatherCode)}</div>
-        {d && <div className="text-[16px] font-semibold text-white/55">↑{d.max}° ↓{d.min}°</div>}
-      </div>
-      <WeatherIcon code={weather.now.weatherCode} isDay={weather.now.isDay} className="w-28 h-28" />
-    </div>
-  )
 }
