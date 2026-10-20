@@ -520,6 +520,27 @@ html.tv .tv-tile:focus {
   transform: scale(1.06);
 }
 /* Sol sütundaki ikonlar yazısız: odaklanınca adı sağında belirir */
+/* Saat: ince ağırlık, büyük optik boyut (Bricolage opsz ekseni), iki nokta soluk */
+.tv-clock {
+  font-weight: 250;
+  font-variation-settings: 'opsz' 96;
+  letter-spacing: -0.045em;
+  font-feature-settings: 'tnum' 1;
+}
+.tv-clock-colon {
+  display: inline-block;
+  margin: 0 0.02em;
+  opacity: 0.45;
+  transform: translateY(-0.06em);
+}
+
+/* Alttaki bölüm satırı: yalnızca glif (+ sayı); ad odakta belirir */
+html.tv .tv-glyph .tv-glyph-label {
+  display: none;
+}
+html.tv .tv-glyph:focus .tv-glyph-label {
+  display: inline;
+}
 /* Alttaki bölüm satırı: tek renk glif + ad; odakta beyazlaşır, hafif zemin alır */
 html.tv .tv-glyph:focus {
   outline: none !important;

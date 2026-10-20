@@ -223,7 +223,7 @@ function TvHome({
               type="button"
               title={a.label}
               aria-label={`${a.label} · ${APP_CAPTION[a.id]}`}
-              className="tv-tile tv-app w-[52px] h-[52px]"
+              className="tv-tile tv-app w-[62px] h-[62px]"
               style={{ overflow: 'visible' }}
               onFocus={() => setFocus(null)}
               onClick={() => openTvApp(a.id)}
@@ -250,7 +250,7 @@ function TvHome({
                 onClick={() => onTab(sec.key)}
               >
                 <Icon weight="fill" className="w-[19px] h-[19px]" />
-                <span>{sec.label}</span>
+                <span className="tv-glyph-label">{sec.label}</span>
                 {!!badge && <span className="tabular-nums text-white/40">{badge}</span>}
               </button>
             )
@@ -341,8 +341,8 @@ function AppIcon({ id }: { id: TvApp['id'] }) {
   if (id === 'youtube') {
     return (
       <span className="w-full h-full grid place-items-center rounded-[inherit]" style={{ background: '#fff' }} data-keep-light>
-        <span className="w-[30px] h-[21px] rounded-[6px] grid place-items-center" style={{ background: '#ff0033' }}>
-          <PlayIcon weight="fill" className="w-3 h-3" style={{ color: '#fff' }} />
+        <span className="w-[38px] h-[27px] rounded-[8px] grid place-items-center" style={{ background: '#ff0033' }}>
+          <PlayIcon weight="fill" className="w-4 h-4" style={{ color: '#fff' }} />
         </span>
       </span>
     )
@@ -351,12 +351,12 @@ function AppIcon({ id }: { id: TvApp['id'] }) {
     // Klasik ayarlar ikonu: gümüş zemin, koyu dişli
     return (
       <span className="w-full h-full grid place-items-center rounded-[inherit]" style={{ background: 'linear-gradient(160deg, #f1f2f4, #b9bec7)' }} data-keep-light>
-        <GearSixIcon weight="fill" className="w-[30px] h-[30px]" style={{ color: '#3f4550' }} />
+        <GearSixIcon weight="fill" className="w-[38px] h-[38px]" style={{ color: '#3f4550' }} />
       </span>
     )
   }
   return (
-    <span className="w-full h-full flex flex-col items-center justify-center rounded-[inherit] leading-[0.95] text-[13px] font-extrabold tracking-tight" style={{ background: '#fff' }} data-keep-light>
+    <span className="w-full h-full flex flex-col items-center justify-center rounded-[inherit] leading-[0.95] text-[16px] font-extrabold tracking-tight" style={{ background: '#fff' }} data-keep-light>
       <span style={{ color: '#1e88e5' }}>tivi</span>
       <span style={{ color: '#0d3c61' }}>mate</span>
     </span>
@@ -413,6 +413,27 @@ function durationText(min: number): string {
   return m ? `${h} saat ${m} dakika` : `${h} saat`
 }
 
+/** TV selamı: günün saatine göre (öğle ve ikindi ayrı) */
+function tvGreeting(now: Date): string {
+  const h = now.getHours()
+  if (h >= 22 || h < 5) return 'İyi geceler'
+  if (h < 11) return 'Günaydın'
+  if (h < 14) return now.getDay() === 5 ? 'Hayırlı cumalar' : 'İyi öğlenler'
+  if (h < 18) return 'Tünaydın'
+  return 'İyi akşamlar'
+}
+
+/** Saat + bulunma eki: 16:30’da, 17:00’de, 09:15’te (son okunan sayıya göre ünlü uyumu) */
+function atTime(d: Date): string {
+  const hh = d.getHours()
+  const mm = d.getMinutes()
+  const n = mm || hh
+  const UNIT = ['da', 'de', 'de', 'te', 'te', 'te', 'da', 'de', 'de', 'da'] // sıfır bir iki üç dört beş altı yedi sekiz dokuz
+  const TENS: Record<number, string> = { 0: 'da', 10: 'da', 20: 'de', 30: 'da', 40: 'ta', 50: 'de' } // on yirmi otuz kırk elli
+  const suffix = n % 10 ? UNIT[n % 10] : TENS[n] ?? 'da'
+  return `${pad(hh)}:${pad(mm)}’${suffix}`
+}
+
 function daySentences(s: Summary, now: Date, lat: number, lon: number): Seg[][] {
   const out: Seg[][] = []
   const p = nextPrayer(now, lat, lon)
@@ -423,11 +444,11 @@ function daySentences(s: Summary, now: Date, lat: number, lon: number): Seg[][] 
   if (next) {
     const owner = next.memberIds.length === 1 ? s.member.get(next.memberIds[0])?.name : undefined
     const what = owner && !/[’']/.test(next.title) ? `${genitive(owner)} ${lowerFirst(next.title)}` : next.title
-    out.push([{ t: 'Sıradaki: ' }, { t: what, hl: true }, { t: `, saat ${fmtTime(new Date(next.start)).replace(':', '.')}.` }])
+    out.push([{ t: 'Sıradaki: ' }, { t: what, hl: true }, { t: `, saat ${atTime(new Date(next.start))}.` }])
   }
 
   const dinner = s.meals.find((m) => m.key === 'dinner')?.title
-  if (dinner && now.getHours() < 21) out.push([{ t: 'Bu akşam sofrada ' }, { t: lowerFirst(dinner), hl: true }, { t: '.' }])
+  if (dinner && now.getHours() < 21) out.push([{ t: 'Bu akşam sofrada ' }, { t: lowerFirst(dinner), hl: true }, { t: ' var.' }])
 
   if (!out.length) out.push([{ t: 'Bugün ev sakin. ' }, { t: 'İyi dinlenmeler.', hl: true }])
   return out.slice(0, 3)
@@ -440,9 +461,39 @@ function dayFootnote(s: Summary): string {
     const names = s.shopping.slice(0, 3).map((i) => lowerFirst(i.text))
     parts.push(`marketten ${names.join(', ')}${s.shopping.length > 3 ? ` ve ${s.shopping.length - 3} ürün daha` : ''} alınacak`)
   }
-  const m = s.lastMsgs[0]
-  if (m && s.now - m.at < 6 * 3_600_000) parts.push(`${s.member.get(m.fromId)?.name ?? 'Biri'} yazdı: “${m.text}”`)
   return parts.join(' · ')
+}
+
+/** Son 24 saatin mesajları (en yeni önce), "Elif yazdı: “…”" biçiminde */
+function recentMessages(s: Summary): string[] {
+  return s.recentMsgs.map((m) => `${s.member.get(m.fromId)?.name ?? 'Biri'} yazdı: “${m.text}”`)
+}
+
+/**
+ * Mesaj satırı: tek mesaj → sabit; birden çok → 6 sn'de bir sıradaki.
+ * Akan bant (marquee) bu stick'te sürekli ~10 fps çizip işlemciyi meşgul ediyordu;
+ * sırayla değişim yalnızca değişim anında tek kare çizer.
+ */
+function MessageTicker({ items }: { items: string[] }) {
+  const [i, setI] = useState(0)
+  useEffect(() => {
+    setI(0)
+    if (items.length < 2) return
+    const id = setInterval(() => setI((x) => (x + 1) % items.length), 6000)
+    return () => clearInterval(id)
+  }, [items.length])
+  if (!items.length) return null
+  return (
+    <p className="mt-6 flex items-center gap-3 text-[18px] text-white/70 min-w-0">
+      <ChatsCircleIcon weight="fill" className="w-5 h-5 shrink-0 text-[#f6c58a]" />
+      <span className="truncate">{items[i % items.length]}</span>
+      {items.length > 1 && (
+        <span className="shrink-0 text-[14px] tabular-nums text-white/35">
+          {(i % items.length) + 1}/{items.length}
+        </span>
+      )}
+    </p>
+  )
 }
 
 function DayHero({ s, now, weather, lat, lon }: { s: Summary; now: Date; weather: WeatherData | null; lat: number; lon: number }) {
@@ -451,7 +502,7 @@ function DayHero({ s, now, weather, lat, lon }: { s: Summary; now: Date; weather
   return (
     <>
       <div className="flex-1 min-w-0 max-w-[820px]">
-        <div className="text-[15px] font-semibold tracking-[0.08em] text-[#f6c58a]/80">{greetingFor(now)}</div>
+        <div className="text-[15px] font-semibold tracking-[0.08em] text-[#f6c58a]/80">{tvGreeting(now)}</div>
         <h1 className="mt-3 text-[40px] leading-[1.22] font-semibold tracking-[-0.01em]">
           {lines.map((segs, i) => (
             <span key={i}>
@@ -464,11 +515,15 @@ function DayHero({ s, now, weather, lat, lon }: { s: Summary; now: Date; weather
           ))}
         </h1>
         {foot && <p className="mt-5 text-[18px] leading-relaxed font-normal text-white/55 line-clamp-2">{foot}</p>}
+        <MessageTicker items={recentMessages(s)} />
       </div>
       <div className="shrink-0 w-[300px] flex flex-col items-end text-right">
         {/* Uygulamalar/özet görünürken saat ve tarih burada büyük durur (sol üstteki hap gizli) */}
-        <div className="text-[104px] leading-[0.9] font-light tracking-[-0.03em] tabular-nums">
-          {pad(now.getHours())}:{pad(now.getMinutes())}
+        {/* Saat: ince ağırlık + büyük optik boyut; iki nokta soluk ve hafif yukarıda */}
+        <div className="tv-clock text-[112px] leading-[0.9] tabular-nums">
+          {pad(now.getHours())}
+          <span className="tv-clock-colon">:</span>
+          {pad(now.getMinutes())}
         </div>
         <div className="mt-2 text-[20px] text-white/70">
           {fmtDayName(now)}, {now.getDate()} {fmtMonth(now)}
@@ -786,6 +841,7 @@ function useSummary(db: DB, now: Date) {
       word: [...db.words].sort((a, b) => a.dueAt - b.dueAt)[0],
       dueWords: db.words.filter((w) => w.dueAt <= t).length,
       lastMsgs: db.messages.slice(-3).reverse(),
+      recentMsgs: db.messages.filter((m) => t - m.at < 24 * 3_600_000).slice(-5).reverse(),
     }
     // dakikada bir yeniden hesaplanır
   }, [db, today, minute])
