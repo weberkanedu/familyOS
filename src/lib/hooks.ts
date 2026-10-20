@@ -28,20 +28,31 @@ export function useIdle(timeoutMin: number): { idle: boolean; wake: () => void }
   return { idle, wake: reset }
 }
 
+/** Yalnızca yerel önizleme: http://localhost…/?saat=17:12 → saat o ana kaydırılır (canlıda etkisiz). */
+const CLOCK_OFFSET = (() => {
+  if (typeof window === 'undefined' || window.location.hostname !== 'localhost') return 0
+  const m = /^(\d{1,2})[:.](\d{2})$/.exec(new URLSearchParams(window.location.search).get('saat') ?? '')
+  if (!m) return 0
+  const target = new Date()
+  target.setHours(Number(m[1]), Number(m[2]), 0, 0)
+  return target.getTime() - Date.now()
+})()
+const clockNow = () => new Date(Date.now() + CLOCK_OFFSET)
+
 export function useClock(intervalMs = 1000): Date {
-  const [now, setNow] = useState(() => new Date())
+  const [now, setNow] = useState(clockNow)
   useEffect(() => {
     if (TV && intervalMs < 60_000) {
       // TV'de saniye gösterilmez: dakika başına hizalı, dakikada bir çizim (CPU dostu)
       let id: ReturnType<typeof setInterval> | undefined
       let t: ReturnType<typeof setTimeout> | undefined
       const align = () => {
-        setNow(new Date())
+        setNow(clockNow())
         clearTimeout(t)
         clearInterval(id)
         t = setTimeout(() => {
-          setNow(new Date())
-          id = setInterval(() => setNow(new Date()), 60_000)
+          setNow(clockNow())
+          id = setInterval(() => setNow(clockNow()), 60_000)
         }, 60_000 - (Date.now() % 60_000) + 50)
       }
       align()
@@ -53,7 +64,7 @@ export function useClock(intervalMs = 1000): Date {
         clearInterval(id)
       }
     }
-    const id = setInterval(() => setNow(new Date()), intervalMs)
+    const id = setInterval(() => setNow(clockNow()), intervalMs)
     return () => clearInterval(id)
   }, [intervalMs])
   return now

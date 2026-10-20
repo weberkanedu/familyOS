@@ -262,7 +262,9 @@ function TvHome({
       <div className="flex-1 min-w-0 flex flex-col">
         {/* Vitrin: uygulama seçiliyken / odak yokken günün özeti, bölüm seçiliyken detay */}
         <section className="flex-1 min-h-0 flex items-center gap-10">
-          {focus ? <SectionHero k={focus} s={s} db={db} status={status} /> : <DayHero s={s} now={now} weather={weather} />}
+          {focus ? <SectionHero k={focus} s={s} db={db} status={status} /> : (
+            <DayHero s={s} now={now} weather={weather} lat={db.settings.lat ?? HOME.lat} lon={db.settings.lon ?? HOME.lon} />
+          )}
         </section>
 
         {/* En altta: uygulamalar (küçük logo + açıklama) ve tuş ipuçları */}
@@ -401,53 +403,119 @@ function Hero({ eyebrow, title, sub, panel }: { eyebrow: string; title: string; 
         <h1 className="mt-2 text-[46px] leading-[1.08] font-extrabold tracking-tight line-clamp-2 break-words">{title}</h1>
         {sub && <div className="mt-3 text-[19px] font-semibold text-white/65 line-clamp-2">{sub}</div>}
       </div>
-      <div className="flex-1 min-w-0 h-[300px] rounded-[26px] bg-[#0b0e16]/70 border border-white/[0.08] p-7 overflow-hidden">{panel}</div>
+      {/* Çerçevesiz: bilgi doğrudan zemine yazılır */}
+      <div className="flex-1 min-w-0 h-[300px] pl-10 border-l border-white/10 overflow-hidden" style={{ borderRadius: 0 }}>
+        {panel}
+      </div>
     </>
   )
 }
 
-function DayHero({ s, now, weather }: { s: Summary; now: Date; weather: WeatherData | null }) {
-  const next = s.upcoming[0]
+/* ---------- Ana ekranın özeti: ev, o anki durumu cümleyle anlatır ---------- */
+
+type Seg = { t: string; hl?: boolean }
+
+const PRAYER_PHRASE: Record<PrayerKey, string> = {
+  imsak: 'İmsak vaktine',
+  gunes: 'Güneşin doğuşuna',
+  ogle: 'Öğle ezanına',
+  ikindi: 'İkindi ezanına',
+  aksam: 'Akşam ezanına',
+  yatsi: 'Yatsı ezanına',
+}
+
+/** Türkçe tamlayan eki: Ali → Ali'nin, Ayşe → Ayşe'nin, Mehmet → Mehmet'in, Elif → Elif'in */
+function genitive(name: string): string {
+  const vowels = 'aıoueiöü'
+  const lower = name.toLocaleLowerCase('tr')
+  const last = [...lower].reverse().find((c) => vowels.includes(c)) ?? 'e'
+  const v = 'aı'.includes(last) ? 'ı' : 'ei'.includes(last) ? 'i' : 'ou'.includes(last) ? 'u' : 'ü'
+  return `${name}’${vowels.includes(lower.slice(-1)) ? 'n' : ''}${v}n`
+}
+
+const lowerFirst = (t: string) => t.charAt(0).toLocaleLowerCase('tr') + t.slice(1)
+
+function durationText(min: number): string {
+  if (min < 60) return `${min} dakika`
+  const h = Math.floor(min / 60)
+  const m = min % 60
+  return m ? `${h} saat ${m} dakika` : `${h} saat`
+}
+
+function daySentences(s: Summary, now: Date, lat: number, lon: number): Seg[][] {
+  const out: Seg[][] = []
+  const p = nextPrayer(now, lat, lon)
+  const left = Math.max(1, Math.round((p.at.getTime() - now.getTime()) / 60_000))
+  if (left <= 180) out.push([{ t: `${PRAYER_PHRASE[p.key]} ` }, { t: durationText(left), hl: true }, { t: ' var.' }])
+
+  const next = s.upcoming.find((e) => !e.allDay)
+  if (next) {
+    const owner = next.memberIds.length === 1 ? s.member.get(next.memberIds[0])?.name : undefined
+    const what = owner && !/[’']/.test(next.title) ? `${genitive(owner)} ${lowerFirst(next.title)}` : next.title
+    out.push([{ t: 'Sıradaki: ' }, { t: what, hl: true }, { t: `, saat ${fmtTime(new Date(next.start)).replace(':', '.')}.` }])
+  }
+
+  const dinner = s.meals.find((m) => m.key === 'dinner')?.title
+  if (dinner && now.getHours() < 21) out.push([{ t: 'Bu akşam sofrada ' }, { t: lowerFirst(dinner), hl: true }, { t: '.' }])
+
+  if (!out.length) out.push([{ t: 'Bugün ev sakin. ' }, { t: 'İyi dinlenmeler.', hl: true }])
+  return out.slice(0, 3)
+}
+
+function dayFootnote(s: Summary): string {
+  const parts: string[] = []
+  if (s.choresLeft.length) parts.push(`${s.choresLeft.length} görev bekliyor`)
+  if (s.shopping.length) {
+    const names = s.shopping.slice(0, 3).map((i) => lowerFirst(i.text))
+    parts.push(`marketten ${names.join(', ')}${s.shopping.length > 3 ? ` ve ${s.shopping.length - 3} ürün daha` : ''} alınacak`)
+  }
+  const m = s.lastMsgs[0]
+  if (m && s.now - m.at < 6 * 3_600_000) parts.push(`${s.member.get(m.fromId)?.name ?? 'Biri'} yazdı: “${m.text}”`)
+  return parts.join(' · ')
+}
+
+function DayHero({ s, now, weather, lat, lon }: { s: Summary; now: Date; weather: WeatherData | null; lat: number; lon: number }) {
+  const lines = daySentences(s, now, lat, lon)
+  const foot = dayFootnote(s)
   return (
-    <Hero
-      eyebrow={next ? 'Sıradaki' : greetingFor(now)}
-      title={next ? next.title : 'Bugün sakin'}
-      sub={
-        next
-          ? [next.allDay ? 'Tüm gün' : fmtTime(new Date(next.start)), next.location, s.emojis(next.memberIds)].filter(Boolean).join(' · ')
-          : `${s.choresLeft.length} görev · ${s.shopping.length} alışveriş`
-      }
-      panel={
-        weather ? (
-          <div className="h-full flex items-center gap-8">
-            <div className="flex items-center gap-4 shrink-0">
-              <WeatherIcon code={weather.now.weatherCode} isDay={weather.now.isDay} className="w-24 h-24" />
-              <div>
-                <div className="text-[60px] leading-none font-extrabold tabular-nums">{weather.now.temp}°</div>
-                <div className="mt-2 text-[16px] font-bold text-white/70">{wmoLabel(weather.now.weatherCode)}</div>
-                {weather.days[0] && (
-                  <div className="text-[15px] font-semibold text-white/50">
-                    ↑{weather.days[0].max}° ↓{weather.days[0].min}°
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="flex-1 grid grid-cols-4 gap-2.5">
-              {weather.days.slice(1, 5).map((d) => (
-                <div key={d.date} className="rounded-2xl bg-white/[0.05] py-3 flex flex-col items-center gap-1">
-                  <span className="text-[13px] font-bold text-white/55">{fmtDayName(d.date, true)}</span>
-                  <WeatherIcon code={d.weatherCode} className="w-10 h-10" />
-                  <span className="text-[15px] font-extrabold tabular-nums">{d.max}°</span>
-                  <span className="text-[12px] font-semibold text-white/45 tabular-nums">{d.min}°</span>
-                </div>
-              ))}
-            </div>
+    <>
+      <div className="flex-1 min-w-0 max-w-[820px]">
+        <div className="text-[15px] font-semibold tracking-[0.08em] text-[#f6c58a]/80">{greetingFor(now)}</div>
+        <h1 className="mt-3 text-[40px] leading-[1.22] font-semibold tracking-[-0.01em]">
+          {lines.map((segs, i) => (
+            <span key={i}>
+              {segs.map((g, j) => (
+                <span key={j} style={g.hl ? { color: '#f6c58a' } : undefined}>
+                  {g.t}
+                </span>
+              ))}{' '}
+            </span>
+          ))}
+        </h1>
+        {foot && <p className="mt-5 text-[18px] leading-relaxed font-normal text-white/55 line-clamp-2">{foot}</p>}
+      </div>
+      {weather && (
+        <div className="shrink-0 w-[300px] flex flex-col items-end text-right">
+          <div className="flex items-center gap-3">
+            <WeatherIcon code={weather.now.weatherCode} isDay={weather.now.isDay} className="w-16 h-16" />
+            <span className="text-[64px] leading-none font-light tabular-nums">{weather.now.temp}°</span>
           </div>
-        ) : (
-          <Muted>Hava durumu yükleniyor…</Muted>
-        )
-      }
-    />
+          <div className="mt-1 text-[16px] text-white/60">
+            {wmoLabel(weather.now.weatherCode)}
+            {weather.days[0] && ` · ${weather.days[0].max}° / ${weather.days[0].min}°`}
+          </div>
+          <div className="mt-5 flex gap-5 text-[14px] text-white/50 tabular-nums">
+            {weather.days.slice(1, 5).map((d) => (
+              <span key={d.date} className="flex flex-col items-center gap-1">
+                <span>{fmtDayName(d.date, true)}</span>
+                <WeatherIcon code={d.weatherCode} className="w-8 h-8" />
+                <span className="text-white/80">{d.max}°</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 
