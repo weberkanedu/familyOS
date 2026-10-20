@@ -163,6 +163,12 @@ class MainActivity : Activity() {
     // Home tuşu, launcher zaten öndeyken: yeniden yükleme yok, sayfaya haber ver.
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        // Debug: launcher zaten açıkken --es url verildiyse o adresle yeniden kur
+        if (BuildConfig.DEBUG && intent.hasExtra("url")) {
+            setIntent(intent)
+            recreate()
+            return
+        }
         if (intent.hasCategory(Intent.CATEGORY_HOME)) dispatchToPage("familyos:home")
     }
 

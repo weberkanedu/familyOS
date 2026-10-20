@@ -1,13 +1,13 @@
 import {
-  CalendarBlankIcon,
+  BasketIcon,
+  BookOpenTextIcon,
+  CalendarDotsIcon,
   CaretLeftIcon,
-  ChatCircleIcon,
-  CheckSquareIcon,
-  ForkKnifeIcon,
-  GearIcon,
-  GraduationCapIcon,
+  ChatsCircleIcon,
+  CookingPotIcon,
+  GearSixIcon,
+  ListChecksIcon,
   PlayIcon,
-  ShoppingCartIcon,
 } from '@phosphor-icons/react'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { cx } from '../ui'
@@ -34,14 +34,15 @@ import type { TabKey } from '../../state/store'
 
 type SectionKey = Exclude<TabKey, 'home'>
 
-const SECTIONS: { key: SectionKey; label: string; icon: typeof GearIcon; tint: string }[] = [
-  { key: 'calendar', label: 'Takvim', icon: CalendarBlankIcon, tint: '#a78bfa' },
-  { key: 'chores', label: 'Görevler', icon: CheckSquareIcon, tint: '#fbbf24' },
-  { key: 'shopping', label: 'Alışveriş', icon: ShoppingCartIcon, tint: '#34d399' },
-  { key: 'meals', label: 'Yemekler', icon: ForkKnifeIcon, tint: '#fb7185' },
-  { key: 'learn', label: 'Öğrenme', icon: GraduationCapIcon, tint: '#38bdf8' },
-  { key: 'chat', label: 'Mesajlar', icon: ChatCircleIcon, tint: '#818cf8' },
-  { key: 'settings', label: 'Ayarlar', icon: GearIcon, tint: '#94a3b8' },
+/** Sol ray: yalnızca ikon (iOS uygulama ikonu gibi renkli kare + beyaz simge). */
+const SECTIONS: { key: SectionKey; label: string; icon: typeof GearSixIcon; from: string; to: string }[] = [
+  { key: 'calendar', label: 'Takvim', icon: CalendarDotsIcon, from: '#a78bfa', to: '#6d28d9' },
+  { key: 'chores', label: 'Görevler', icon: ListChecksIcon, from: '#fcd34d', to: '#f59e0b' },
+  { key: 'shopping', label: 'Alışveriş', icon: BasketIcon, from: '#6ee7b7', to: '#059669' },
+  { key: 'meals', label: 'Yemekler', icon: CookingPotIcon, from: '#fda4af', to: '#e11d48' },
+  { key: 'learn', label: 'Öğrenme', icon: BookOpenTextIcon, from: '#7dd3fc', to: '#0284c7' },
+  { key: 'chat', label: 'Mesajlar', icon: ChatsCircleIcon, from: '#a5b4fc', to: '#4f46e5' },
+  { key: 'settings', label: 'Ayarlar', icon: GearSixIcon, from: '#cbd5e1', to: '#475569' },
 ]
 
 const APP_CAPTION: Record<TvApp['id'], string> = { tivimate: 'Canlı TV', youtube: 'Reklamsız video' }
@@ -80,7 +81,8 @@ export function TvLayout({
 
   return (
     <div className="tv-root relative h-screen overflow-hidden text-white flex flex-col">
-      <header className="shrink-0 flex items-center justify-between gap-6 px-16 pt-9 pb-4">
+      <TvBackdrop familyPhoto={db.settings.familyPhoto} day={dateKey(now)} />
+      <header className="relative shrink-0 flex items-center justify-between gap-6 px-16 pt-9 pb-4">
         <div className="flex items-center gap-4 min-w-0">
           {section && (
             <button
@@ -99,7 +101,7 @@ export function TvLayout({
 
       {section ? (
         // Sayfa: mevcut modül, sade koyu çerçevede (html.night teması)
-        <main key={tab} className="flex-1 overflow-y-auto px-16 pb-10 pt-2">
+        <main key={tab} className="relative flex-1 overflow-y-auto px-16 pb-10 pt-2">
           {children}
         </main>
       ) : (
@@ -225,37 +227,9 @@ function TvHome({
   }
 
   return (
-    <div className="flex-1 flex flex-col px-16 pb-7 min-h-0">
-      {/* Vitrin: uygulama seçiliyken / odak yokken günün özeti, bölüm seçiliyken detay */}
-      <section className="flex-1 min-h-0 flex items-center gap-10">
-        {focus ? <SectionHero k={focus} s={s} db={db} status={status} /> : <DayHero s={s} now={now} weather={weather} />}
-      </section>
-
-      {/* Uygulamalar */}
-      {apps.length > 0 && (
-        <Row label="Uygulamalar">
-          {apps.map((a, i) => (
-            <div key={a.id} className="flex flex-col gap-2">
-              <button
-                ref={i === 0 ? firstRef : undefined}
-                type="button"
-                className="tv-tile w-[196px] h-[80px]"
-                onFocus={() => setFocus(null)}
-                onClick={() => openTvApp(a.id)}
-                aria-label={a.label}
-              >
-                <AppArt id={a.id} />
-              </button>
-              <span className="text-[13px] font-semibold text-white/50 pl-1">
-                {a.label} · {APP_CAPTION[a.id]}
-              </span>
-            </div>
-          ))}
-        </Row>
-      )}
-
-      {/* Pano */}
-      <Row label="Pano">
+    <div className="relative flex-1 flex min-h-0 pl-16 pr-16 pb-7 gap-10">
+      {/* Sol ray: bölümler, yalnızca ikon */}
+      <nav className="shrink-0 flex flex-col justify-center gap-3.5" aria-label="Pano">
         {SECTIONS.map((sec, i) => {
           const Icon = sec.icon
           const badge = badges[sec.key]
@@ -264,42 +238,130 @@ function TvHome({
               key={sec.key}
               ref={apps.length === 0 && i === 0 ? firstRef : undefined}
               type="button"
-              className="tv-tile tv-tile-soft w-[138px] h-[80px] flex flex-col items-start justify-between px-3.5 py-3 text-left"
+              title={sec.label}
+              aria-label={sec.label}
+              className="tv-tile tv-icon w-[58px] h-[58px] grid place-items-center"
+              style={{ background: `linear-gradient(150deg, ${sec.from}, ${sec.to})`, overflow: 'visible' }}
               onFocus={() => setFocus(sec.key)}
               onClick={() => onTab(sec.key)}
             >
-              <div className="w-full flex items-center justify-between">
-                <Icon weight="duotone" className="w-7 h-7" style={{ color: sec.tint }} />
-                {!!badge && <span className="text-[13px] font-extrabold tabular-nums text-white/55">{badge}</span>}
-              </div>
-              <span className="text-[15px] font-semibold text-white/90">{sec.label}</span>
+              <Icon weight="fill" className="w-[30px] h-[30px]" style={{ color: '#fff' }} />
+              {!!badge && (
+                <span
+                  className="absolute -top-1.5 -right-1.5 min-w-[22px] h-[22px] px-1.5 rounded-full grid place-items-center text-[12px] font-extrabold tabular-nums"
+                  style={{ background: '#fff', color: '#0f172a' }}
+                >
+                  {badge}
+                </span>
+              )}
             </button>
           )
         })}
-      </Row>
+      </nav>
 
-      <div className="mt-2 flex justify-end gap-5 text-[13px] font-semibold text-white/35">
-        <span>
-          <Key>◀ ▶</Key> gez
-        </span>
-        <span>
-          <Key>OK</Key> aç
-        </span>
-        <span>
-          <Key>Geri</Key> ana ekran
-        </span>
+      <div className="flex-1 min-w-0 flex flex-col">
+        {/* Vitrin: uygulama seçiliyken / odak yokken günün özeti, bölüm seçiliyken detay */}
+        <section className="flex-1 min-h-0 flex items-center gap-10">
+          {focus ? <SectionHero k={focus} s={s} db={db} status={status} /> : <DayHero s={s} now={now} weather={weather} />}
+        </section>
+
+        {/* En altta: uygulamalar (küçük logo + açıklama) ve tuş ipuçları */}
+        <div className="mt-4 flex items-end justify-between gap-6">
+          <div className="flex gap-4">
+            {apps.map((a, i) => (
+              <div key={a.id} className="flex flex-col gap-1.5">
+                <button
+                  ref={i === 0 ? firstRef : undefined}
+                  type="button"
+                  className="tv-tile w-[136px] h-[54px]"
+                  onFocus={() => setFocus(null)}
+                  onClick={() => openTvApp(a.id)}
+                  aria-label={a.label}
+                >
+                  <AppArt id={a.id} />
+                </button>
+                <span className="text-[12px] font-semibold text-white/50 pl-0.5">{APP_CAPTION[a.id]}</span>
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-5 text-[13px] font-semibold text-white/35 pb-1">
+            <span>
+              <Key>◀ ▶</Key> gez
+            </span>
+            <span>
+              <Key>OK</Key> aç
+            </span>
+            <span>
+              <Key>Geri</Key> ana ekran
+            </span>
+          </div>
+        </div>
       </div>
     </div>
   )
 }
 
-function Row({ label, children }: { label: string; children: ReactNode }) {
+/**
+ * Arka plan: bulanık görsel. Blur ekranda hesaplanmaz (zayıf GPU'da kare başına pahalı):
+ * görsel bir kez küçük tuvalde bulanıklaştırılır, sonra büyütülerek gösterilir.
+ * Kaynak: /tv-bg/list.json (günlük döner) → yoksa aile fotoğrafı → yoksa düz zemin.
+ */
+function TvBackdrop({ familyPhoto, day }: { familyPhoto?: string; day: string }) {
+  const [src, setSrc] = useState<string | null>(null)
+
+  useEffect(() => {
+    let alive = true
+    ;(async () => {
+      let list: string[] = []
+      try {
+        const r = await fetch('/tv-bg/list.json', { cache: 'no-cache' })
+        if (r.ok) list = ((await r.json()) as string[]).map((f) => `/tv-bg/${f}`)
+      } catch {
+        /* yoksay */
+      }
+      if (!list.length && familyPhoto) list = [familyPhoto]
+      if (!list.length) return
+      const pick = list[Math.floor(Date.parse(day) / 86_400_000) % list.length]
+      const blurred = await preBlur(pick).catch(() => null)
+      if (alive) setSrc(blurred)
+    })()
+    return () => {
+      alive = false
+    }
+  }, [familyPhoto, day])
+
+  if (!src) return null
   return (
-    <div className="mt-4">
-      <div className="mb-2 text-[14px] font-bold text-white/45">{label}</div>
-      <div className="flex gap-3.5">{children}</div>
+    <div className="absolute inset-0 pointer-events-none" aria-hidden>
+      <img src={src} alt="" className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.8 }} />
+      {/* Okunurluk: sol ve alt koyulaşır */}
+      <div className="absolute inset-0 bg-gradient-to-r from-[#07090f]/75 via-[#07090f]/35 to-[#07090f]/10" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#07090f]/70 via-transparent to-[#07090f]/30" />
     </div>
   )
+}
+
+function preBlur(url: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => {
+      const w = 320
+      const h = 180
+      const c = document.createElement('canvas')
+      c.width = w
+      c.height = h
+      const ctx = c.getContext('2d')!
+      // object-cover kırpma
+      const scale = Math.max(w / img.naturalWidth, h / img.naturalHeight)
+      const dw = img.naturalWidth * scale
+      const dh = img.naturalHeight * scale
+      ctx.filter = 'blur(7px) saturate(1.15)'
+      ctx.drawImage(img, (w - dw) / 2 - 12, (h - dh) / 2 - 12, dw + 24, dh + 24)
+      resolve(c.toDataURL('image/jpeg', 0.8))
+    }
+    img.onerror = reject
+    img.src = url
+  })
 }
 
 function Key({ children }: { children: ReactNode }) {
@@ -310,16 +372,16 @@ function AppArt({ id }: { id: TvApp['id'] }) {
   return (
     <div className="w-full h-full grid place-items-center" style={{ background: '#fff' }} data-keep-light>
       {id === 'youtube' ? (
-        <div className="flex items-center gap-2">
-          <span className="w-9 h-[26px] rounded-lg grid place-items-center" style={{ background: '#ff0033' }}>
-            <PlayIcon weight="fill" className="w-4 h-4" style={{ color: '#fff' }} />
+        <div className="flex items-center gap-1.5">
+          <span className="w-7 h-5 rounded-md grid place-items-center" style={{ background: '#ff0033' }}>
+            <PlayIcon weight="fill" className="w-3 h-3" style={{ color: '#fff' }} />
           </span>
-          <span className="text-[22px] font-extrabold tracking-tight" style={{ color: '#0f0f0f' }}>
+          <span className="text-[17px] font-extrabold tracking-tight" style={{ color: '#0f0f0f' }}>
             YouTube
           </span>
         </div>
       ) : (
-        <span className="text-[28px] font-extrabold tracking-tight">
+        <span className="text-[21px] font-extrabold tracking-tight">
           <span style={{ color: '#1e88e5' }}>tivi</span>
           <span style={{ color: '#0d3c61' }}>mate</span>
         </span>
@@ -339,7 +401,7 @@ function Hero({ eyebrow, title, sub, panel }: { eyebrow: string; title: string; 
         <h1 className="mt-2 text-[46px] leading-[1.08] font-extrabold tracking-tight line-clamp-2 break-words">{title}</h1>
         {sub && <div className="mt-3 text-[19px] font-semibold text-white/65 line-clamp-2">{sub}</div>}
       </div>
-      <div className="flex-1 min-w-0 h-[248px] rounded-[26px] bg-white/[0.05] border border-white/[0.08] p-6 overflow-hidden">{panel}</div>
+      <div className="flex-1 min-w-0 h-[300px] rounded-[26px] bg-[#0b0e16]/70 border border-white/[0.08] p-7 overflow-hidden">{panel}</div>
     </>
   )
 }
