@@ -520,12 +520,22 @@ html.tv .tv-tile:focus {
   transform: scale(1.06);
 }
 /* Sol sütundaki ikonlar yazısız: odaklanınca adı sağında belirir */
+/* Alttaki bölüm satırı: tek renk glif + ad; odakta beyazlaşır, hafif zemin alır */
+html.tv .tv-glyph:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  color: #fff;
+  background: rgba(255, 236, 220, 0.14);
+}
+html.tv .tv-glyph:focus span {
+  color: #fff;
+}
 html.tv .tv-app:focus::after {
   content: attr(title);
   position: absolute;
-  left: calc(100% + 18px);
-  top: 50%;
-  transform: translateY(-50%);
+  left: 50%;
+  bottom: calc(100% + 14px);
+  transform: translateX(-50%);
   white-space: nowrap;
   font-size: 15px;
   font-weight: 600;

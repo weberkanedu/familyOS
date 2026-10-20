@@ -45,7 +45,7 @@ export type TvApp = { id: 'tivimate' | 'youtube' | 'android-settings'; label: st
 const APPS: TvApp[] = [
   { id: 'tivimate', label: 'TiviMate' },
   { id: 'youtube', label: 'YouTube' },
-  { id: 'android-settings', label: 'Ayarlar' },
+  { id: 'android-settings', label: 'TV ayarları' },
 ]
 
 /** Bu cihazda kurulu olan uygulama kısayolları (köprü yoksa boş). */

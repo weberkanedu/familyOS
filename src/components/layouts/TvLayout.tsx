@@ -1,6 +1,6 @@
 import {
-  AndroidLogoIcon,
   BasketIcon,
+  SlidersHorizontalIcon,
   BookOpenTextIcon,
   CalendarDotsIcon,
   CaretLeftIcon,
@@ -35,15 +35,16 @@ import type { TabKey } from '../../state/store'
 
 type SectionKey = Exclude<TabKey, 'home'>
 
-/** Sol ray: yalnızca ikon (iOS uygulama ikonu gibi renkli kare + beyaz simge). */
-const SECTIONS: { key: SectionKey; label: string; icon: typeof GearSixIcon; from: string; to: string }[] = [
-  { key: 'calendar', label: 'Takvim', icon: CalendarDotsIcon, from: '#a78bfa', to: '#6d28d9' },
-  { key: 'chores', label: 'Görevler', icon: ListChecksIcon, from: '#fcd34d', to: '#f59e0b' },
-  { key: 'shopping', label: 'Alışveriş', icon: BasketIcon, from: '#6ee7b7', to: '#059669' },
-  { key: 'meals', label: 'Yemekler', icon: CookingPotIcon, from: '#fda4af', to: '#e11d48' },
-  { key: 'learn', label: 'Öğrenme', icon: BookOpenTextIcon, from: '#7dd3fc', to: '#0284c7' },
-  { key: 'chat', label: 'Mesajlar', icon: ChatsCircleIcon, from: '#a5b4fc', to: '#4f46e5' },
-  { key: 'settings', label: 'Ayarlar', icon: GearSixIcon, from: '#cbd5e1', to: '#475569' },
+/** Bölümler: alttaki satırda tek renk glif + ad (gösterge çubuğu üslubu). */
+const SECTIONS: { key: SectionKey; label: string; icon: typeof GearSixIcon }[] = [
+  { key: 'calendar', label: 'Takvim', icon: CalendarDotsIcon },
+  { key: 'chores', label: 'Görevler', icon: ListChecksIcon },
+  { key: 'shopping', label: 'Alışveriş', icon: BasketIcon },
+  { key: 'meals', label: 'Yemekler', icon: CookingPotIcon },
+  { key: 'learn', label: 'Öğrenme', icon: BookOpenTextIcon },
+  { key: 'chat', label: 'Mesajlar', icon: ChatsCircleIcon },
+  // familyOS'un kendi ayarları (Android ayarları dişliyle uygulamalarda)
+  { key: 'settings', label: 'Ayarlar', icon: SlidersHorizontalIcon },
 ]
 
 const APP_CAPTION: Record<TvApp['id'], string> = {
@@ -204,75 +205,64 @@ function TvHome({
   }
 
   return (
-    <div className="relative flex-1 flex min-h-0 pl-16 pr-16 pb-7 gap-10">
-      {/* Sol sütun: üstte uygulamalar, altında bölümler; alt kenar tuş ipuçlarıyla hizalı */}
-      <nav className="shrink-0 flex flex-col justify-end gap-2.5" aria-label="Uygulamalar ve pano">
-        {apps.map((a, i) => (
-          <button
-            key={a.id}
-            ref={i === 0 ? firstRef : undefined}
-            type="button"
-            title={a.label}
-            aria-label={`${a.label} · ${APP_CAPTION[a.id]}`}
-            className="tv-tile tv-icon tv-app w-[48px] h-[48px]"
-            style={{ overflow: 'visible' }}
-            onFocus={() => setFocus(null)}
-            onClick={() => openTvApp(a.id)}
-          >
-            <AppIcon id={a.id} />
-          </button>
-        ))}
-        {apps.length > 0 && <span className="h-px w-[48px] bg-white/15 my-1.5" aria-hidden />}
-        {SECTIONS.map((sec, i) => {
-          const Icon = sec.icon
-          const badge = badges[sec.key]
-          return (
+    <div className="relative flex-1 flex flex-col min-h-0 px-16 pb-8">
+      {/* Vitrin: uygulama seçiliyken / odak yokken günün özeti, bölüm seçiliyken detay */}
+      <section className="flex-1 min-h-0 flex items-center gap-10">
+        {focus ? <SectionHero k={focus} s={s} db={db} status={status} /> : (
+          <DayHero s={s} now={now} weather={weather} lat={db.settings.lat ?? HOME.lat} lon={db.settings.lon ?? HOME.lon} />
+        )}
+      </section>
+
+      {/* Uygulamalar: bölüm satırının üstünde */}
+      {apps.length > 0 && (
+        <div className="mt-4 flex gap-3.5" aria-label="Uygulamalar">
+          {apps.map((a, i) => (
             <button
-              key={sec.key}
-              ref={apps.length === 0 && i === 0 ? firstRef : undefined}
+              key={a.id}
+              ref={i === 0 ? firstRef : undefined}
               type="button"
-              title={sec.label}
-              aria-label={sec.label}
-              className="tv-tile tv-icon w-[48px] h-[48px] grid place-items-center"
-              style={{ background: `linear-gradient(150deg, ${sec.from}, ${sec.to})`, overflow: 'visible' }}
-              onFocus={() => setFocus(sec.key)}
-              onClick={() => onTab(sec.key)}
+              title={a.label}
+              aria-label={`${a.label} · ${APP_CAPTION[a.id]}`}
+              className="tv-tile tv-app w-[52px] h-[52px]"
+              style={{ overflow: 'visible' }}
+              onFocus={() => setFocus(null)}
+              onClick={() => openTvApp(a.id)}
             >
-              <Icon weight="fill" className="w-[25px] h-[25px]" style={{ color: '#fff' }} />
-              {!!badge && (
-                <span
-                  className="absolute -top-1.5 -right-1.5 min-w-[20px] h-[20px] px-1 rounded-full grid place-items-center text-[11px] font-extrabold tabular-nums"
-                  style={{ background: '#fff', color: '#0f172a' }}
-                >
-                  {badge}
-                </span>
-              )}
+              <AppIcon id={a.id} />
             </button>
-          )
-        })}
-      </nav>
+          ))}
+        </div>
+      )}
 
-      <div className="flex-1 min-w-0 flex flex-col">
-        {/* Vitrin: uygulama seçiliyken / odak yokken günün özeti, bölüm seçiliyken detay */}
-        <section className="flex-1 min-h-0 flex items-center gap-10">
-          {focus ? <SectionHero k={focus} s={s} db={db} status={status} /> : (
-            <DayHero s={s} now={now} weather={weather} lat={db.settings.lat ?? HOME.lat} lon={db.settings.lon ?? HOME.lon} />
-          )}
-        </section>
-
-        {/* En altta: tuş ipuçları (sol sütunun alt kenarıyla aynı hizada) */}
-        <div className="mt-4 flex items-end justify-end gap-6">
-          <div className="flex gap-5 text-[13px] font-semibold text-white/35">
-            <span>
-              <Key>◀ ▶</Key> gez
-            </span>
-            <span>
-              <Key>OK</Key> aç
-            </span>
-            <span>
-              <Key>Geri</Key> ana ekran
-            </span>
-          </div>
+      {/* En altta: bölümler yan yana — tek renk sade glif + ad + sayı; sağda tuş ipuçları */}
+      <div className="mt-5 flex items-center justify-between gap-6">
+        <nav className="flex items-center gap-2" aria-label="Pano">
+          {SECTIONS.map((sec, i) => {
+            const Icon = sec.icon
+            const badge = badges[sec.key]
+            return (
+              <button
+                key={sec.key}
+                ref={apps.length === 0 && i === 0 ? firstRef : undefined}
+                type="button"
+                className="tv-glyph h-11 px-3.5 rounded-full flex items-center gap-2 whitespace-nowrap text-[17px] font-medium text-white/55"
+                onFocus={() => setFocus(sec.key)}
+                onClick={() => onTab(sec.key)}
+              >
+                <Icon weight="fill" className="w-[19px] h-[19px]" />
+                <span>{sec.label}</span>
+                {!!badge && <span className="tabular-nums text-white/40">{badge}</span>}
+              </button>
+            )
+          })}
+        </nav>
+        <div className="flex gap-5 text-[13px] font-semibold text-white/35 shrink-0">
+          <span>
+            <Key>◀ ▶</Key> gez
+          </span>
+          <span>
+            <Key>OK</Key> aç
+          </span>
         </div>
       </div>
     </div>
@@ -358,9 +348,10 @@ function AppIcon({ id }: { id: TvApp['id'] }) {
     )
   }
   if (id === 'android-settings') {
+    // Klasik ayarlar ikonu: gümüş zemin, koyu dişli
     return (
-      <span className="w-full h-full grid place-items-center rounded-[inherit]" style={{ background: 'linear-gradient(150deg, #5eead4, #0f766e)' }}>
-        <AndroidLogoIcon weight="fill" className="w-[25px] h-[25px]" style={{ color: '#fff' }} />
+      <span className="w-full h-full grid place-items-center rounded-[inherit]" style={{ background: 'linear-gradient(160deg, #f1f2f4, #b9bec7)' }} data-keep-light>
+        <GearSixIcon weight="fill" className="w-[30px] h-[30px]" style={{ color: '#3f4550' }} />
       </span>
     )
   }
