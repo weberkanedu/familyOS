@@ -41,10 +41,11 @@ function detect(): boolean {
 export const TV = detect()
 
 /* ---------- Uygulamalar ---------- */
-export type TvApp = { id: 'tivimate' | 'youtube'; label: string }
+export type TvApp = { id: 'tivimate' | 'youtube' | 'android-settings'; label: string }
 const APPS: TvApp[] = [
   { id: 'tivimate', label: 'TiviMate' },
   { id: 'youtube', label: 'YouTube' },
+  { id: 'android-settings', label: 'Ayarlar' },
 ]
 
 /** Bu cihazda kurulu olan uygulama kısayolları (köprü yoksa boş). */

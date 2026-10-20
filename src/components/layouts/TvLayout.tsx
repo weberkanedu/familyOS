@@ -1,4 +1,5 @@
 import {
+  AndroidLogoIcon,
   BasketIcon,
   BookOpenTextIcon,
   CalendarDotsIcon,
@@ -19,7 +20,7 @@ import { greetingFor } from '../../lib/specialDays'
 import { wmoLabel, type WeatherData } from '../../lib/openMeteo'
 import { HOME } from '../../lib/location'
 import { themeById } from '../../lib/themes'
-import { nextPrayer, PRAYER_LABELS, PRAYER_ORDER, type PrayerKey } from '../../lib/prayer'
+import { nextPrayer, prayerTimes, PRAYER_LABELS, PRAYER_ORDER, type PrayerKey } from '../../lib/prayer'
 import { openTvApp, tvApps, type TvApp } from '../../lib/tv'
 import { isChoreDoneToday, isChoreDueToday } from '../../state/actions'
 import { syncLabel, type SyncStatus } from '../../sync/useFamilySync'
@@ -45,7 +46,11 @@ const SECTIONS: { key: SectionKey; label: string; icon: typeof GearSixIcon; from
   { key: 'settings', label: 'Ayarlar', icon: GearSixIcon, from: '#cbd5e1', to: '#475569' },
 ]
 
-const APP_CAPTION: Record<TvApp['id'], string> = { tivimate: 'Canlı TV', youtube: 'Reklamsız video' }
+const APP_CAPTION: Record<TvApp['id'], string> = {
+  tivimate: 'Canlı TV',
+  youtube: 'Reklamsız video',
+  'android-settings': 'Android TV ayarları',
+}
 
 const SYNC_DOT: Record<SyncStatus, string> = {
   live: 'bg-emerald-400',
@@ -78,11 +83,14 @@ export function TvLayout({
 }) {
   const now = useClock(1000) // TV'de dakikaya hizalı (hooks.ts)
   const section = SECTIONS.find((s) => s.key === tab)
+  // Ana ekranda odaklanılan bölüm (null: uygulamalar / özet). Özet görünürken saat-hava sağda büyük durur.
+  const [homeFocus, setHomeFocus] = useState<SectionKey | null>(null)
+  const showStatus = !!section || homeFocus !== null
 
   return (
     <div className="tv-root relative h-screen overflow-hidden text-white flex flex-col">
       <TvBackdrop familyPhoto={db.settings.familyPhoto} day={dateKey(now)} />
-      <header className="relative shrink-0 flex items-center justify-between gap-6 px-16 pt-9 pb-4">
+      <header className="relative shrink-0 h-[100px] flex items-center justify-between gap-6 px-16 pt-5">
         <div className="flex items-center gap-4 min-w-0">
           {section && (
             <button
@@ -93,10 +101,10 @@ export function TvLayout({
               <CaretLeftIcon className="w-5 h-5" weight="bold" /> Ana ekran
             </button>
           )}
-          <StatusPill now={now} weather={weather} city={city} status={status} />
+          {showStatus && <StatusPill now={now} weather={weather} city={city} status={status} />}
           {section && <div className="text-[26px] font-display tracking-wide ml-2 truncate">{section.label}</div>}
         </div>
-        <PrayerPill now={now} lat={db.settings.lat ?? HOME.lat} lon={db.settings.lon ?? HOME.lon} />
+        <PrayerTimes now={now} lat={db.settings.lat ?? HOME.lat} lon={db.settings.lon ?? HOME.lon} />
       </header>
 
       {section ? (
@@ -106,7 +114,7 @@ export function TvLayout({
         </main>
       ) : (
         <>
-          <TvHome db={db} now={now} weather={weather} status={status} onTab={onTab} />
+          <TvHome db={db} now={now} weather={weather} status={status} onTab={onTab} focus={homeFocus} setFocus={setHomeFocus} />
           {/* Ana ekranda da senkron uyarıları / aile kodu penceresi */}
           <div className="absolute left-16 right-16 bottom-4">{children}</div>
         </>
@@ -140,52 +148,18 @@ function StatusPill({ now, weather, city, status }: { now: Date; weather: Weathe
   )
 }
 
-const PRAYER_TO: Record<PrayerKey, string> = {
-  imsak: 'İmsaka',
-  gunes: 'Güneşe',
-  ogle: 'Öğleye',
-  ikindi: 'İkindiye',
-  aksam: 'Akşama',
-  yatsi: 'Yatsıya',
-}
-
-/** Namaz vakitleri: altı vakit yan yana, sıradaki vurgulu + kalan süre. */
-function PrayerPill({ now, lat, lon }: { now: Date; lat: number; lon: number }) {
+/** Namaz vakitleri: sade, çerçevesiz, vurgusuz bir satır (bakınca anlaşılır). */
+function PrayerTimes({ now, lat, lon }: { now: Date; lat: number; lon: number }) {
   const day = dateKey(now)
-  const minute = Math.floor(now.getTime() / 60_000)
-  const next = useMemo(() => nextPrayer(now, lat, lon), [day, minute, lat, lon])
-  const left = Math.max(0, Math.round((next.at.getTime() - now.getTime()) / 60_000))
-  const leftText = left >= 60 ? `${Math.floor(left / 60)} sa ${left % 60} dk` : `${left} dk`
-
-  // Yatsıdan sonra sıradaki yarının İmsak'ı: bugünün listesinde vurgu yok
-  const nextIsToday = dateKey(next.at) === day
-
+  const times = useMemo(() => prayerTimes(now, lat, lon), [day, lat, lon])
   return (
-    <div className="tv-pill h-12 pl-1.5 pr-4 flex items-center gap-0.5 shrink-0" data-keep-light>
-      {PRAYER_ORDER.map((k) => {
-        const isNext = nextIsToday && k === next.key
-        const past = next.today[k].getTime() <= now.getTime()
-        return (
-          <div
-            key={k}
-            className="h-10 w-[60px] rounded-full flex flex-col items-center justify-center leading-none"
-            style={isNext ? { background: '#fff' } : undefined}
-          >
-            <span className="text-[10px] font-bold" style={{ color: isNext ? '#64748b' : 'rgba(255,255,255,0.45)' }}>
-              {PRAYER_LABELS[k]}
-            </span>
-            <span
-              className="mt-1 text-[15px] font-extrabold tabular-nums"
-              style={{ color: isNext ? '#0f172a' : past ? 'rgba(255,255,255,0.38)' : 'rgba(255,255,255,0.88)' }}
-            >
-              {fmtTime(next.today[k])}
-            </span>
-          </div>
-        )
-      })}
-      <span className="ml-2.5 text-[13px] font-semibold text-white/55 whitespace-nowrap">
-        {PRAYER_TO[next.key]} {leftText}
-      </span>
+    <div className="flex items-end gap-6 shrink-0 leading-none">
+      {PRAYER_ORDER.map((k) => (
+        <div key={k} className="flex flex-col items-center gap-1.5">
+          <span className="text-[11px] font-medium text-white/40">{PRAYER_LABELS[k]}</span>
+          <span className="text-[17px] font-medium tabular-nums text-white/80">{fmtTime(times[k])}</span>
+        </div>
+      ))}
     </div>
   )
 }
@@ -198,15 +172,18 @@ function TvHome({
   weather,
   status,
   onTab,
+  focus,
+  setFocus,
 }: {
   db: DB
   now: Date
   weather: WeatherData | null
   status: SyncStatus
   onTab: (t: TabKey) => void
+  focus: SectionKey | null
+  setFocus: (k: SectionKey | null) => void
 }) {
   const apps = useMemo(tvApps, [])
-  const [focus, setFocus] = useState<SectionKey | null>(null)
   const firstRef = useRef<HTMLButtonElement>(null)
 
   // Açılışta ve Home tuşunda odak ilk kutuda (kumanda hemen çalışsın)
@@ -228,8 +205,24 @@ function TvHome({
 
   return (
     <div className="relative flex-1 flex min-h-0 pl-16 pr-16 pb-7 gap-10">
-      {/* Sol ray: bölümler, yalnızca ikon */}
-      <nav className="shrink-0 flex flex-col justify-center gap-3.5" aria-label="Pano">
+      {/* Sol sütun: üstte uygulamalar, altında bölümler; alt kenar tuş ipuçlarıyla hizalı */}
+      <nav className="shrink-0 flex flex-col justify-end gap-2.5" aria-label="Uygulamalar ve pano">
+        {apps.map((a, i) => (
+          <button
+            key={a.id}
+            ref={i === 0 ? firstRef : undefined}
+            type="button"
+            title={a.label}
+            aria-label={`${a.label} · ${APP_CAPTION[a.id]}`}
+            className="tv-tile tv-icon tv-app w-[48px] h-[48px]"
+            style={{ overflow: 'visible' }}
+            onFocus={() => setFocus(null)}
+            onClick={() => openTvApp(a.id)}
+          >
+            <AppIcon id={a.id} />
+          </button>
+        ))}
+        {apps.length > 0 && <span className="h-px w-[48px] bg-white/15 my-1.5" aria-hidden />}
         {SECTIONS.map((sec, i) => {
           const Icon = sec.icon
           const badge = badges[sec.key]
@@ -240,15 +233,15 @@ function TvHome({
               type="button"
               title={sec.label}
               aria-label={sec.label}
-              className="tv-tile tv-icon w-[58px] h-[58px] grid place-items-center"
+              className="tv-tile tv-icon w-[48px] h-[48px] grid place-items-center"
               style={{ background: `linear-gradient(150deg, ${sec.from}, ${sec.to})`, overflow: 'visible' }}
               onFocus={() => setFocus(sec.key)}
               onClick={() => onTab(sec.key)}
             >
-              <Icon weight="fill" className="w-[30px] h-[30px]" style={{ color: '#fff' }} />
+              <Icon weight="fill" className="w-[25px] h-[25px]" style={{ color: '#fff' }} />
               {!!badge && (
                 <span
-                  className="absolute -top-1.5 -right-1.5 min-w-[22px] h-[22px] px-1.5 rounded-full grid place-items-center text-[12px] font-extrabold tabular-nums"
+                  className="absolute -top-1.5 -right-1.5 min-w-[20px] h-[20px] px-1 rounded-full grid place-items-center text-[11px] font-extrabold tabular-nums"
                   style={{ background: '#fff', color: '#0f172a' }}
                 >
                   {badge}
@@ -267,26 +260,9 @@ function TvHome({
           )}
         </section>
 
-        {/* En altta: uygulamalar (küçük logo + açıklama) ve tuş ipuçları */}
-        <div className="mt-4 flex items-end justify-between gap-6">
-          <div className="flex gap-4">
-            {apps.map((a, i) => (
-              <div key={a.id} className="flex flex-col gap-1.5">
-                <button
-                  ref={i === 0 ? firstRef : undefined}
-                  type="button"
-                  className="tv-tile w-[136px] h-[54px]"
-                  onFocus={() => setFocus(null)}
-                  onClick={() => openTvApp(a.id)}
-                  aria-label={a.label}
-                >
-                  <AppArt id={a.id} />
-                </button>
-                <span className="text-[12px] font-semibold text-white/50 pl-0.5">{APP_CAPTION[a.id]}</span>
-              </div>
-            ))}
-          </div>
-          <div className="flex gap-5 text-[13px] font-semibold text-white/35 pb-1">
+        {/* En altta: tuş ipuçları (sol sütunun alt kenarıyla aynı hizada) */}
+        <div className="mt-4 flex items-end justify-end gap-6">
+          <div className="flex gap-5 text-[13px] font-semibold text-white/35">
             <span>
               <Key>◀ ▶</Key> gez
             </span>
@@ -370,25 +346,29 @@ function Key({ children }: { children: ReactNode }) {
   return <span className="inline-block mr-1.5 px-1.5 py-0.5 rounded-md border border-white/15 text-white/55">{children}</span>
 }
 
-function AppArt({ id }: { id: TvApp['id'] }) {
-  return (
-    <div className="w-full h-full grid place-items-center" style={{ background: '#fff' }} data-keep-light>
-      {id === 'youtube' ? (
-        <div className="flex items-center gap-1.5">
-          <span className="w-7 h-5 rounded-md grid place-items-center" style={{ background: '#ff0033' }}>
-            <PlayIcon weight="fill" className="w-3 h-3" style={{ color: '#fff' }} />
-          </span>
-          <span className="text-[17px] font-extrabold tracking-tight" style={{ color: '#0f0f0f' }}>
-            YouTube
-          </span>
-        </div>
-      ) : (
-        <span className="text-[21px] font-extrabold tracking-tight">
-          <span style={{ color: '#1e88e5' }}>tivi</span>
-          <span style={{ color: '#0d3c61' }}>mate</span>
+/** Uygulama ikonları: bölüm ikonlarıyla aynı kare ölçüde. */
+function AppIcon({ id }: { id: TvApp['id'] }) {
+  if (id === 'youtube') {
+    return (
+      <span className="w-full h-full grid place-items-center rounded-[inherit]" style={{ background: '#fff' }} data-keep-light>
+        <span className="w-[30px] h-[21px] rounded-[6px] grid place-items-center" style={{ background: '#ff0033' }}>
+          <PlayIcon weight="fill" className="w-3 h-3" style={{ color: '#fff' }} />
         </span>
-      )}
-    </div>
+      </span>
+    )
+  }
+  if (id === 'android-settings') {
+    return (
+      <span className="w-full h-full grid place-items-center rounded-[inherit]" style={{ background: 'linear-gradient(150deg, #5eead4, #0f766e)' }}>
+        <AndroidLogoIcon weight="fill" className="w-[25px] h-[25px]" style={{ color: '#fff' }} />
+      </span>
+    )
+  }
+  return (
+    <span className="w-full h-full flex flex-col items-center justify-center rounded-[inherit] leading-[0.95] text-[13px] font-extrabold tracking-tight" style={{ background: '#fff' }} data-keep-light>
+      <span style={{ color: '#1e88e5' }}>tivi</span>
+      <span style={{ color: '#0d3c61' }}>mate</span>
+    </span>
   )
 }
 
@@ -494,27 +474,36 @@ function DayHero({ s, now, weather, lat, lon }: { s: Summary; now: Date; weather
         </h1>
         {foot && <p className="mt-5 text-[18px] leading-relaxed font-normal text-white/55 line-clamp-2">{foot}</p>}
       </div>
+      <div className="shrink-0 w-[300px] flex flex-col items-end text-right">
+        {/* Uygulamalar/özet görünürken saat ve tarih burada büyük durur (sol üstteki hap gizli) */}
+        <div className="text-[104px] leading-[0.9] font-light tracking-[-0.03em] tabular-nums">
+          {pad(now.getHours())}:{pad(now.getMinutes())}
+        </div>
+        <div className="mt-2 text-[20px] text-white/70">
+          {fmtDayName(now)}, {now.getDate()} {fmtMonth(now)}
+        </div>
       {weather && (
-        <div className="shrink-0 w-[300px] flex flex-col items-end text-right">
+        <div className="mt-8 flex flex-col items-end">
           <div className="flex items-center gap-3">
-            <WeatherIcon code={weather.now.weatherCode} isDay={weather.now.isDay} className="w-16 h-16" />
-            <span className="text-[64px] leading-none font-light tabular-nums">{weather.now.temp}°</span>
+            <WeatherIcon code={weather.now.weatherCode} isDay={weather.now.isDay} className="w-12 h-12" />
+            <span className="text-[44px] leading-none font-light tabular-nums">{weather.now.temp}°</span>
           </div>
-          <div className="mt-1 text-[16px] text-white/60">
+          <div className="mt-1 text-[15px] text-white/60">
             {wmoLabel(weather.now.weatherCode)}
             {weather.days[0] && ` · ${weather.days[0].max}° / ${weather.days[0].min}°`}
           </div>
-          <div className="mt-5 flex gap-5 text-[14px] text-white/50 tabular-nums">
+          <div className="mt-4 flex gap-5 text-[13px] text-white/50 tabular-nums">
             {weather.days.slice(1, 5).map((d) => (
               <span key={d.date} className="flex flex-col items-center gap-1">
                 <span>{fmtDayName(d.date, true)}</span>
-                <WeatherIcon code={d.weatherCode} className="w-8 h-8" />
+                <WeatherIcon code={d.weatherCode} className="w-7 h-7" />
                 <span className="text-white/80">{d.max}°</span>
               </span>
             ))}
           </div>
         </div>
       )}
+      </div>
     </>
   )
 }

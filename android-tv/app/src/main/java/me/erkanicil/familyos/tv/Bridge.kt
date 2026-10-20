@@ -68,15 +68,20 @@ class Bridge(
     fun nativeVersion(): String = BuildConfig.VERSION_NAME
 
     private fun resolve(nameOrPkg: String): String? {
+        if (nameOrPkg == SETTINGS) return SETTINGS
         val candidates = ALIASES[nameOrPkg.lowercase()] ?: listOf(nameOrPkg)
         return candidates.firstOrNull { launchIntent(it) != null }
     }
 
     private fun launchIntent(pkg: String): Intent? =
-        pm.getLeanbackLaunchIntentForPackage(pkg) ?: pm.getLaunchIntentForPackage(pkg)
+        if (pkg == SETTINGS) Intent(android.provider.Settings.ACTION_SETTINGS)
+        else pm.getLeanbackLaunchIntentForPackage(pkg) ?: pm.getLaunchIntentForPackage(pkg)
 
     companion object {
         private const val TAG = "FamilyOS"
+
+        /** Android TV sistem ayarları (FamilyOS.openApp("android-settings")) */
+        const val SETTINGS = "android-settings"
 
         // Paket adlarını stick'te `adb shell pm list packages -3` ile doğrula.
         val ALIASES = mapOf(

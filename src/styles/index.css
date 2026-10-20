@@ -519,6 +519,22 @@ html.tv .tv-pill:focus {
 html.tv .tv-tile:focus {
   transform: scale(1.06);
 }
+/* Sol sütundaki ikonlar yazısız: odaklanınca adı sağında belirir */
+html.tv .tv-app:focus::after {
+  content: attr(title);
+  position: absolute;
+  left: calc(100% + 18px);
+  top: 50%;
+  transform: translateY(-50%);
+  white-space: nowrap;
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(23, 17, 15, 0.85);
+  padding: 6px 12px;
+  border-radius: 999px;
+  pointer-events: none;
+}
 html.tv .tv-tile-soft:focus {
   background: rgba(255, 255, 255, 0.16);
 }
