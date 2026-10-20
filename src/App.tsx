@@ -4,6 +4,7 @@ import { useFamilySync, syncLabel } from './sync/useFamilySync'
 import { useWeather } from './lib/useWeather'
 import { useMediaQuery } from './lib/hooks'
 import { KioskLayout } from './components/layouts/KioskLayout'
+import { TvLayout } from './components/layouts/TvLayout'
 import { MobileLayout } from './components/layouts/MobileLayout'
 import { Dashboard } from './modules/Dashboard'
 import { SyncNotice } from './components/SyncNotice'
@@ -185,6 +186,25 @@ export default function App() {
   const popups = (
     <ProgramPopups db={db} which={program?.kind ?? null} kidId={program?.kidId} onClose={() => setProgram(null)} />
   )
+
+  if (TV) {
+    return (
+      <TvLayout
+        db={db}
+        tab={tab}
+        onTab={setTab}
+        status={status}
+        weather={weather.data}
+        city={db.settings.city || HOME.city}
+        flash={flash}
+        onFlashDismiss={() => setFlash(null)}
+      >
+        {/* Ana ekranı TvLayout kendisi çizer; sayfalarda mevcut modül */}
+        {tab === 'home' ? <SyncNotice status={status} pending={pending} authError={authError} kiosk /> : page}
+        {popups}
+      </TvLayout>
+    )
+  }
 
   if (kiosk) {
     return (

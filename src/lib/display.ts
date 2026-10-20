@@ -1,6 +1,7 @@
 import { useEffect, useSyncExternalStore } from 'react'
 import type { Settings } from '../types'
 import { useClock } from './hooks'
+import { TV } from './tv'
 
 /* ---------- Yazı boyutu (cihaza özel: duvar tableti büyük, telefon normal) ---------- */
 export type TextScale = 'normal' | 'large' | 'xlarge'
@@ -57,7 +58,8 @@ export function isNightTime(s: Pick<Settings, 'nightMode' | 'nightFrom' | 'night
 /** Gece saatlerinde <html> üzerine .night sınıfı ekler (koyu, loş tema). */
 export function useNightMode(s: Settings): boolean {
   const now = useClock(30_000)
-  const night = isNightTime(s, now)
+  // TV arayüzü koyu tasarlandı: sayfalar da her saat koyu temada açılır
+  const night = TV || isNightTime(s, now)
   useEffect(() => {
     document.documentElement.classList.toggle('night', night)
     const meta = document.querySelector('meta[name="theme-color"]')
