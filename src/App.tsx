@@ -15,6 +15,7 @@ import { uiBus } from './state/uiBus'
 import { ProgramPopups } from './modules/Programs'
 import type { WeatherWidgetProps } from './components/WeatherWidget'
 import { HOME } from './lib/location'
+import { TV, closeTopLayer } from './lib/tv'
 import type { Message } from './types'
 
 /* Sekmeler ihtiyaç anında yüklenir: duvar ekranı açılışta yalnızca ana sayfayı indirir */
@@ -60,7 +61,26 @@ export default function App() {
     return () => clearTimeout(t)
   }, [])
 
-  const kiosk = db.settings.mode === 'kiosk' || (db.settings.mode === 'auto' && wide)
+  // TV'de her zaman kiosk düzeni (kumandayla mobil alt menü kullanışsız)
+  const kiosk = TV || db.settings.mode === 'kiosk' || (db.settings.mode === 'auto' && wide)
+
+  /* TV: Geri tuşu açık pencereyi kapatır, yoksa ana sayfaya döner; Home tuşu → ana sayfa */
+  useEffect(() => {
+    if (!TV) return
+    const back = () => {
+      if (!closeTopLayer()) setTab('home')
+    }
+    const home = () => {
+      closeTopLayer()
+      setTab('home')
+    }
+    window.addEventListener('familyos:back', back)
+    window.addEventListener('familyos:home', home)
+    return () => {
+      window.removeEventListener('familyos:back', back)
+      window.removeEventListener('familyos:home', home)
+    }
+  }, [])
   const weather = useWeather(db.settings.lat ?? HOME.lat, db.settings.lon ?? HOME.lon, db.settings.weatherEnabled)
 
   /* Tema: <html> üzerine yazılır (portal içindeki pencereler de temayı alsın) */

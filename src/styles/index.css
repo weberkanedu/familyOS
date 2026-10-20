@@ -420,6 +420,48 @@ html.night :is(input, select, textarea):not([data-keep-light] *) { color: #f1f5f
 html.night ::placeholder { color: #64748b; }
 
 /* ============================================================
+   TV modu (html.tv) — Android TV stick: zayıf GPU, 1 GB RAM.
+   Blur/filtre/animasyon kare başına yüzlerce ms tutuyordu; hepsi kapalı.
+   ============================================================ */
+html.tv *,
+html.tv *::before,
+html.tv *::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  filter: none !important;
+  animation: none !important;
+  transition: none !important;
+  box-shadow: none !important;
+  will-change: auto !important;
+}
+html.tv .kiosk-bg,
+html.tv .mesh-bg {
+  background-attachment: scroll;
+}
+/* Blur gidince yarı saydam yüzeyler okunaksız kalmasın */
+html.tv :is(.glass-soft, .glass-strong, .bg-white\/45, .bg-white\/50, .bg-white\/55):not([data-keep-light] *) {
+  background-color: rgba(255, 255, 255, 0.82);
+}
+html.tv.night :is(.glass-soft, .glass-strong, .bg-white\/45, .bg-white\/50, .bg-white\/55):not([data-keep-light] *) {
+  background-color: rgb(var(--night-surface) / 0.92);
+}
+/* Animasyonsuz konfeti ekranın tepesinde donup kalırdı */
+html.tv .confetti-piece {
+  display: none;
+}
+/* D-pad odak halkası (kanepeden görünsün) */
+html.tv :focus {
+  outline: 4px solid rgb(var(--brand-400)) !important;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 8px rgb(var(--brand-400) / 0.28) !important;
+}
+html.tv input:focus,
+html.tv textarea:focus,
+html.tv select:focus {
+  outline-offset: 0;
+}
+
+/* ============================================================
    Konfeti (doğum günü / bayram) — kısa süreli, saf CSS
    ============================================================ */
 @keyframes confetti-fall {

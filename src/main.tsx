@@ -6,6 +6,10 @@ import { seedDB } from './state/seed'
 import { getDB, hydrate, markSeedOnly } from './state/store'
 import { migrate } from './state/migrate'
 import { resolveSyncUrl } from './sync/config'
+import { setupTV } from './lib/tv'
+
+/* TV launcher'ı içindeysek: hafif görünüm + D-pad (ilk çizimden önce) */
+setupTV()
 
 /* İlk açılış: boşsa tohum veriyle başlat (id'ler sabit → cihazlar arası çakışmaz) */
 if (getDB().members.length === 0) {

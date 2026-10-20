@@ -1,5 +1,6 @@
-import { CalendarHeartIcon, CaretLeftIcon, CaretRightIcon } from '@phosphor-icons/react'
-import type { ReactNode } from 'react'
+import { CalendarHeartIcon, CaretLeftIcon, CaretRightIcon, TelevisionSimpleIcon, YoutubeLogoIcon } from '@phosphor-icons/react'
+import { useMemo, type ReactNode } from 'react'
+import { TV, openTvApp, tvApps } from '../../lib/tv'
 import { NAV } from '../nav'
 import { Avatar, cx } from '../ui'
 import type { SyncStatus } from '../../sync/useFamilySync'
@@ -52,6 +53,7 @@ export function KioskLayout({
   const toggleNav = () => saveSettings({ navCollapsed: !collapsed })
   const theme = themeById(db.settings.theme)
   const zoom = useTextZoom()
+  const apps = useMemo(tvApps, [])
 
   return (
     <div className="h-screen flex overflow-hidden kiosk-bg text-slate-900" data-theme={theme.id}>
@@ -118,7 +120,29 @@ export function KioskLayout({
             (ok: şeridin tam kenarında, yarısı içeride yarısı dışarıda taşacak şekilde) */}
         <div className="pt-3 mt-2 border-t border-white/10 flex flex-col items-center gap-2">
           <div className="relative w-full flex justify-center">
-            <FamilyClover members={db.members} size={collapsed ? 50 : 62} />
+            {/* TV: yoncanın yerinde uygulama kısayolları (kaymayan alan → her sayfadan tek tuşla) */}
+            {apps.length > 0 ? (
+              <div className={cx('w-full px-2 grid gap-1.5', collapsed ? 'grid-cols-1' : 'grid-cols-2')}>
+                {apps.map((a) => {
+                  const Icon = a.id === 'youtube' ? YoutubeLogoIcon : TelevisionSimpleIcon
+                  return (
+                    <button
+                      key={a.id}
+                      type="button"
+                      onClick={() => openTvApp(a.id)}
+                      title={a.label}
+                      aria-label={a.label}
+                      className="h-14 rounded-2xl bg-white/10 hover:bg-white/15 flex flex-col items-center justify-center gap-0.5 text-white/85"
+                    >
+                      <Icon weight="fill" className={cx('w-7 h-7', a.id === 'youtube' ? 'text-rose-400' : 'text-sky-300')} />
+                      {!collapsed && <span className="text-[10px] font-bold leading-none">{a.label}</span>}
+                    </button>
+                  )
+                })}
+              </div>
+            ) : (
+              <FamilyClover members={db.members} size={collapsed ? 50 : 62} />
+            )}
             <button
               type="button"
               onClick={toggleNav}
@@ -184,9 +208,11 @@ export function KioskLayout({
               <span className="text-[42px] font-extrabold text-slate-900 tabular-nums tracking-tight">
                 {pad(now.getHours())}:{pad(now.getMinutes())}
               </span>
-              <span className="text-lg font-bold text-slate-400 tabular-nums mb-1 ml-0.5">
-                {pad(now.getSeconds())}
-              </span>
+              {!TV && (
+                <span className="text-lg font-bold text-slate-400 tabular-nums mb-1 ml-0.5">
+                  {pad(now.getSeconds())}
+                </span>
+              )}
             </div>
           </div>
         </header>

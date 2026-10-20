@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { TV } from './tv'
 
 /** Dokunmatik kiosk için boşta kalma (ekran koruyucu) algılama. */
 export function useIdle(timeoutMin: number): { idle: boolean; wake: () => void } {
@@ -30,6 +31,28 @@ export function useIdle(timeoutMin: number): { idle: boolean; wake: () => void }
 export function useClock(intervalMs = 1000): Date {
   const [now, setNow] = useState(() => new Date())
   useEffect(() => {
+    if (TV && intervalMs < 60_000) {
+      // TV'de saniye gösterilmez: dakika başına hizalı, dakikada bir çizim (CPU dostu)
+      let id: ReturnType<typeof setInterval> | undefined
+      let t: ReturnType<typeof setTimeout> | undefined
+      const align = () => {
+        setNow(new Date())
+        clearTimeout(t)
+        clearInterval(id)
+        t = setTimeout(() => {
+          setNow(new Date())
+          id = setInterval(() => setNow(new Date()), 60_000)
+        }, 60_000 - (Date.now() % 60_000) + 50)
+      }
+      align()
+      // TiviMate/YouTube'dan dönünce zamanlayıcılar duraklatılmıştı: hemen güncelle, yeniden hizala
+      window.addEventListener('familyos:resume', align)
+      return () => {
+        window.removeEventListener('familyos:resume', align)
+        clearTimeout(t)
+        clearInterval(id)
+      }
+    }
     const id = setInterval(() => setNow(new Date()), intervalMs)
     return () => clearInterval(id)
   }, [intervalMs])

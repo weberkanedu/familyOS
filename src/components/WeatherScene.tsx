@@ -4,6 +4,7 @@
  */
 import { wmoGroup } from '../lib/openMeteo'
 import { cx } from './ui'
+import { TV } from '../lib/tv'
 
 function rand(i: number, salt: number): number {
   const x = Math.sin(i * 127.1 + salt * 311.7) * 43758.5453
@@ -174,6 +175,15 @@ export function WeatherScene({ code, isDay = true }: { code: number; isDay?: boo
         return 'linear-gradient(160deg,#4f8ef7 0%,#818cf8 100%)'
     }
   })()
+
+  // TV: yüzlerce animasyonlu parçacık yerine yalnızca gökyüzü rengi
+  if (TV) {
+    return (
+      <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ background: sky }}>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/12 to-transparent" />
+      </div>
+    )
+  }
 
   return (
     <div className={cx('absolute inset-0 overflow-hidden pointer-events-none', 'fs-scene')} style={{ background: sky }}>
