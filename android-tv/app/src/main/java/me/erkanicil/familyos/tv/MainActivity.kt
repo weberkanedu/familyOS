@@ -87,9 +87,16 @@ class MainActivity : Activity() {
         webView.requestFocus()
     }
 
+    // Bağlantı hata vermeden asılı kalırsa (modem interneti kestiğinde) siyah ekran yerine yedek sayfa
+    private val loadWatchdog = Runnable { if (!pageShown) showOffline() }
+    private var pageShown = false
+
     private fun loadHome() {
         showingOffline = false
+        pageShown = false
         webView.loadUrl(homeUrl)
+        root.removeCallbacks(loadWatchdog)
+        root.postDelayed(loadWatchdog, LOAD_TIMEOUT_MS)
     }
 
     private inner class Client : WebViewClient() {
@@ -112,6 +119,10 @@ class MainActivity : Activity() {
         }
 
         override fun onPageFinished(view: WebView, url: String) {
+            if (!showingOffline) {
+                pageShown = true
+                root.removeCallbacks(loadWatchdog)
+            }
             if (!firstPaintLogged && !showingOffline) {
                 firstPaintLogged = true
                 Log.i(TAG, "startup: pageFinished ${SystemClock.uptimeMillis() - createdAt} ms")
@@ -138,6 +149,7 @@ class MainActivity : Activity() {
     }
 
     private fun showOffline() {
+        root.removeCallbacks(loadWatchdog)
         showingOffline = true
         webView.loadDataWithBaseURL("https://$OFFLINE_HOST/", OFFLINE_HTML, "text/html", "utf-8", null)
     }
@@ -208,6 +220,7 @@ class MainActivity : Activity() {
     companion object {
         private const val TAG = "FamilyOS"
         private const val OFFLINE_HOST = "offline.familyos.local"
+        private const val LOAD_TIMEOUT_MS = 10_000L
 
         private val OFFLINE_HTML = """
             <!doctype html><html><head><meta name="viewport" content="width=960">
@@ -222,6 +235,7 @@ class MainActivity : Activity() {
               <div>
                 <button onclick="FamilyOS.openApp('tivimate')">TiviMate</button>
                 <button onclick="FamilyOS.openApp('youtube')">YouTube</button>
+                <button onclick="FamilyOS.openApp('android-settings')">TV ayarları</button>
                 <button onclick="location.href='/retry'">Tekrar dene</button>
               </div>
               <script>

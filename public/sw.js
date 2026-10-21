@@ -1,8 +1,33 @@
 /* FamilyOS Service Worker - çevrimdışı fallback + önbellek + push */
-const VERSION = 'familyos-v2' // değişince eski önbellekler silinir
+const VERSION = 'familyos-v3' // değişince eski önbellekler silinir
 const PRECACHE = `${VERSION}-precache`
 const RUNTIME = `${VERSION}-runtime`
 const OFFLINE_URL = '/offline.html'
+
+const NAV_TIMEOUT_MS = 6000
+
+function withTimeout(promise, ms) {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error('timeout')), ms)
+    promise.then(
+      (v) => (clearTimeout(t), resolve(v)),
+      (e) => (clearTimeout(t), reject(e)),
+    )
+  })
+}
+
+/** Çevrimdışı kabuk: önce her açılışta güncellenen RUNTIME kopyası (en son çalışan sürüm),
+ *  sonra kurulumdaki kopya. caches.match() tüm önbellekleri oluşturma sırasıyla tarar ve
+ *  kurulumdaki ESKİ index.html'i döndürürdü — gece TV'ye TV modundan önceki sürüm gelmişti. */
+async function cachedShell() {
+  const runtime = await caches.open(RUNTIME)
+  return (
+    (await runtime.match('/index.html')) ||
+    (await caches.match('/index.html')) ||
+    (await caches.match(OFFLINE_URL)) ||
+    new Response('Çevrimdışı', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
+  )
+}
 
 const PRECACHE_ASSETS = [
   '/',
@@ -54,16 +79,19 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(req.url)
   if (url.origin !== self.location.origin) return
 
-  // Navigasyon: ağa öncelik, olmazsa önbellek, olmazsa offline sayfası
+  // Navigasyon: ağa öncelik (en çok NAV_TIMEOUT_MS bekle), olmazsa önbellek, olmazsa offline sayfası.
+  // Zaman aşımı: modem interneti kestiğinde istek hata vermeden asılı kalıyordu (TV'de siyah ekran).
   if (req.mode === 'navigate') {
     event.respondWith(
-      fetch(req)
+      withTimeout(fetch(req), NAV_TIMEOUT_MS)
         .then((res) => {
-          const copy = res.clone()
-          caches.open(RUNTIME).then((c) => c.put('/index.html', copy)).catch(() => {})
+          if (res.ok) {
+            const copy = res.clone()
+            caches.open(RUNTIME).then((c) => c.put('/index.html', copy)).catch(() => {})
+          }
           return res
         })
-        .catch(async () => (await caches.match('/index.html')) || (await caches.match(OFFLINE_URL))),
+        .catch(cachedShell),
     )
     return
   }

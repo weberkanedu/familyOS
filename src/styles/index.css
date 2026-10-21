@@ -481,6 +481,56 @@ html.tv select:focus {
   outline-offset: 0;
 }
 
+/* TV: bölüm sayfaları (Mesajlar, Ayarlar, Takvim…) ana ekranla aynı sıcak palette.
+   Gece temasının soğuk lacivert yüzeyi ve ailenin marka rengi (mor vb.) yerine kahve + amber. */
+html.tv,
+html.tv [data-theme] {
+  --night-surface: 38 29 26;
+  --brand-50: 253 243 230;
+  --brand-100: 250 228 200;
+  --brand-400: 246 197 138;
+  --brand-500: 222 135 74;
+  --brand-600: 196 110 52;
+  --bg-base: #17110f;
+  --mesh-1: transparent;
+  --mesh-2: transparent;
+  --mesh-3: transparent;
+  --mesh-4: transparent;
+}
+html.tv .tv-root main {
+  color: #f3e9df;
+}
+html.tv .tv-root main :is(.bg-white, .bg-white\/90, .bg-white\/85, .bg-white\/80, .bg-white\/70, .bg-white\/65, .bg-white\/60, .bg-white\/55, .bg-white\/50, .bg-white\/45, .glass-soft, .glass-strong):not([data-keep-light] *) {
+  background-color: rgba(255, 236, 220, 0.06) !important;
+  border-color: rgba(255, 236, 220, 0.09) !important;
+}
+html.tv .tv-root main :is(.bg-slate-50, .bg-slate-100, .bg-slate-200):not([data-keep-light] *) {
+  background-color: rgba(255, 236, 220, 0.08) !important;
+}
+html.tv .tv-root main :is(.text-slate-900, .text-slate-800, .text-slate-700):not([data-keep-light] *) {
+  color: #f3e9df;
+}
+html.tv .tv-root main :is(.text-slate-600, .text-slate-500):not([data-keep-light] *) {
+  color: rgba(243, 233, 223, 0.66);
+}
+html.tv .tv-root main :is(.text-slate-400, .text-slate-300):not([data-keep-light] *) {
+  color: rgba(243, 233, 223, 0.42);
+}
+html.tv .tv-root main :is(input, select, textarea):not([data-keep-light] *) {
+  background-color: rgba(255, 236, 220, 0.07) !important;
+  border-color: rgba(255, 236, 220, 0.16) !important;
+  color: #f3e9df;
+}
+/* Pencereler (Modal) da TV'de aynı sıcak yüzey */
+html.tv [role='dialog'] {
+  background-color: #231a17 !important;
+  color: #f3e9df;
+  border: 1px solid rgba(255, 236, 220, 0.1);
+}
+html.tv [role='dialog'] :is(.bg-white\/90, .bg-white):not([data-keep-light] *) {
+  background-color: #231a17 !important;
+}
+
 /* TV ana ekranı (TvLayout) */
 /* Sıcak koyu zemin (soğuk mavi-gri yerine): kahve-mürdüm, köşelerde amber ve gül ışığı */
 .tv-root {

@@ -303,8 +303,8 @@ function TvBackdrop({ familyPhoto, day }: { familyPhoto?: string; day: string })
     <div className="absolute inset-0 pointer-events-none" aria-hidden>
       <img src={src} alt="" className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.8 }} />
       {/* Okunurluk: sol ve alt koyulaşır */}
-      <div className="absolute inset-0 bg-gradient-to-r from-[#07090f]/75 via-[#07090f]/35 to-[#07090f]/10" />
-      <div className="absolute inset-0 bg-gradient-to-t from-[#07090f]/70 via-transparent to-[#07090f]/30" />
+      <div className="absolute inset-0 bg-gradient-to-r from-[#17110f]/80 via-[#17110f]/40 to-[#17110f]/15" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#17110f]/75 via-transparent to-[#17110f]/35" />
     </div>
   )
 }
