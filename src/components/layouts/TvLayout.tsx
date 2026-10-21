@@ -155,7 +155,12 @@ export function TvLayout({
   )
 }
 
-const TV_IDLE_MIN = 5
+/** 5 dk; yalnızca yerel önizlemede ?bosta=0.2 ile kısaltılabilir (canlıda etkisiz) */
+const TV_IDLE_MIN = (() => {
+  if (typeof window === 'undefined' || window.location.hostname !== 'localhost') return 5
+  const v = Number(new URLSearchParams(window.location.search).get('bosta'))
+  return v > 0 ? v : 5
+})()
 
 function StatusPill({ now, weather, city, status }: { now: Date; weather: WeatherData | null; city: string; status: SyncStatus }) {
   return (
