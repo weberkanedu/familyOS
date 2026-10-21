@@ -1,5 +1,7 @@
 import {
   BasketIcon,
+  BookOpenIcon,
+  QuotesIcon,
   SlidersHorizontalIcon,
   BookOpenTextIcon,
   CalendarDotsIcon,
@@ -22,6 +24,7 @@ import { HOME } from '../../lib/location'
 import { themeById } from '../../lib/themes'
 import { nextPrayer, prayerTimes, PRAYER_LABELS, PRAYER_ORDER, type PrayerKey } from '../../lib/prayer'
 import { openTvApp, tvApps, type TvApp } from '../../lib/tv'
+import { useSpiritual } from '../../lib/spiritual'
 import { isChoreDoneToday, isChoreDueToday } from '../../state/actions'
 import { syncLabel, type SyncStatus } from '../../sync/useFamilySync'
 import { MEAL_SLOTS, type DB, type Member, type Message } from '../../types'
@@ -102,7 +105,7 @@ export function TvLayout({
               <CaretLeftIcon className="w-5 h-5" weight="bold" /> Ana ekran
             </button>
           )}
-          {showStatus && <StatusPill now={now} weather={weather} city={city} status={status} />}
+          {showStatus ? <StatusPill now={now} weather={weather} city={city} status={status} /> : <SpiritualLines />}
           {section && <div className="text-[26px] font-display tracking-wide ml-2 truncate">{section.label}</div>}
         </div>
         <PrayerTimes now={now} lat={db.settings.lat ?? HOME.lat} lon={db.settings.lon ?? HOME.lon} />
@@ -145,6 +148,29 @@ function StatusPill({ now, weather, city, status }: { now: Date; weather: Weathe
         </>
       )}
       <span className={cx('w-2 h-2 rounded-full', SYNC_DOT[status])} title={syncLabel(status)} />
+    </div>
+  )
+}
+
+/** Sol üst: günün ayeti ve hadisi — namaz vakitleri hizasında iki satır, başlarında küçük ikon. */
+function SpiritualLines() {
+  const sp = useSpiritual()
+  if (!sp) return <div className="h-12" aria-hidden />
+  const rows = [
+    { key: 'ayet', Icon: BookOpenIcon, label: 'Günün ayeti', text: sp.ayet.text, ref: sp.ayet.ref },
+    { key: 'hadis', Icon: QuotesIcon, label: 'Günün hadisi', text: `“${sp.hadis.text.replace(/\.$/, '')}”`, ref: sp.hadis.ref },
+  ]
+  return (
+    <div className="min-w-0 max-w-[640px] flex flex-col gap-2 leading-tight">
+      {rows.map(({ key, Icon, label, text, ref }) => (
+        <p key={key} className="min-w-0 flex items-center gap-2.5 text-[14px]" aria-label={`${label}: ${text} (${ref})`}>
+          <span className="w-[22px] h-[22px] shrink-0 grid place-items-center rounded-full bg-[#f6c58a]/15">
+            <Icon weight="fill" className="w-[13px] h-[13px] text-[#f6c58a]" />
+          </span>
+          <span className="truncate text-white/80">{text}</span>
+          <span className="shrink-0 text-[12px] text-white/40">{ref}</span>
+        </p>
+      ))}
     </div>
   )
 }

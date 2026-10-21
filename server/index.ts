@@ -5,6 +5,7 @@
  *  - /sync           → WebSocket gerçek zamanlı senkron (aile kodu ile)
  *  - /push/*         → Web Push (VAPID anahtarları yoksa otomatik üretilir)
  *  - /health         → sağlık kontrolü
+ *  - /api/spiritual  → TV için rastgele kısa ayet + hadis (havuz, DATA_DIR/spiritual.json)
  *  - DATA_DIR        → kalıcı veri (state.json) + günlük yedekler (backups/, 14 gün)
  *
  * Ortam değişkenleri:
@@ -26,6 +27,7 @@ import { CLOSE_AUTH, MAX_MESSAGE_BYTES, safeEqual, sanitizeOp } from '../src/syn
 import type { ClientMsg, Op, ServerMsg } from '../src/sync/protocol'
 import { AuthLimiter, RoomState } from '../src/sync/room'
 import { SECURITY_HEADERS } from './securityHeaders'
+import { createSpiritual } from './spiritual'
 
 const PORT = Number(process.env.PORT || 3000)
 const DATA_DIR = resolve(process.env.DATA_DIR || './data')
@@ -38,6 +40,7 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '')
 const STATE_FILE = join(DATA_DIR, 'state.json')
 const PUSH_FILE = join(DATA_DIR, 'push-subs.json')
 const VAPID_FILE = join(DATA_DIR, 'vapid.json')
+const SPIRITUAL_FILE = join(DATA_DIR, 'spiritual.json')
 const BACKUP_DIR = join(DATA_DIR, 'backups')
 const BACKUP_KEEP = 14
 const PERSIST_DELAY_MS = 300
@@ -307,12 +310,15 @@ async function serveStatic(req: IncomingMessage, res: ServerResponse, path: stri
   res.end(req.method === 'HEAD' ? undefined : body)
 }
 
+const spiritual = createSpiritual(SPIRITUAL_FILE)
+
 const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url ?? '/', 'http://x')
     const path = url.pathname
     if (path === '/health') return sendJson(res, 200, { ok: true, rev: room.rev, clients: wss.clients.size })
     if (path.startsWith('/push/')) return await handlePush(req, res, path)
+    if (path === '/api/spiritual') return sendJson(res, 200, await spiritual.random())
     if (req.method !== 'GET' && req.method !== 'HEAD') return sendJson(res, 405, { error: 'method' })
     return await serveStatic(req, res, path)
   } catch (e) {
@@ -434,6 +440,7 @@ setInterval(() => {
 
 /* ------------------------------------------------------------------ */
 server.listen(PORT, () => {
+  spiritual.warmUp()
   console.log(`Aile Panosu hazır → http://0.0.0.0:${PORT}`)
   if (!FAMILY_CODE) console.warn('⚠ FAMILY_CODE tanımlı değil — senkron kapalı. Ortam değişkeni olarak ekleyin.')
   else if (FAMILY_CODE.length < 6) console.warn('⚠ FAMILY_CODE kısa — en az 6 karakter önerilir.')
