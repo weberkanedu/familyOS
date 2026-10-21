@@ -15,8 +15,8 @@ import {
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { cx } from '../ui'
 import { WeatherIcon } from '../WeatherIcon'
-import { MessageFlash } from '../IdleScreen'
-import { useClock } from '../../lib/hooks'
+import { IdleScreen, MessageFlash } from '../IdleScreen'
+import { useClock, useIdle } from '../../lib/hooks'
 import { dateKey, fmtDayName, fmtMonth, fmtTime, pad, todayKey, relativeTime } from '../../lib/time'
 import { greetingFor } from '../../lib/specialDays'
 import { wmoLabel, type WeatherData } from '../../lib/openMeteo'
@@ -91,6 +91,21 @@ export function TvLayout({
   const [homeFocus, setHomeFocus] = useState<SectionKey | null>(null)
   const showStatus = !!section || homeFocus !== null
 
+  // Ekran koruyucu: 5 dk tuşa basılmazsa kelime ekranı (stick uyumaz: MainActivity ekranı açık tutar)
+  const { idle, wake } = useIdle(TV_IDLE_MIN)
+  useEffect(() => {
+    if (!idle) return
+    // Uyandıran ilk tuş yalnızca uyandırsın (OK arkadaki uygulamayı açmasın, ok tuşu odağı kaydırmasın)
+    const swallow = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') return // Geri/Home: useIdle zaten uyandırır
+      e.preventDefault()
+      e.stopImmediatePropagation()
+      wake()
+    }
+    window.addEventListener('keydown', swallow, true)
+    return () => window.removeEventListener('keydown', swallow, true)
+  }, [idle, wake])
+
   return (
     <div className="tv-root relative h-screen overflow-hidden text-white flex flex-col">
       <TvBackdrop familyPhoto={db.settings.familyPhoto} day={dateKey(now)} />
@@ -125,9 +140,22 @@ export function TvLayout({
       )}
 
       {flash && <MessageFlash message={flash} member={db.members.find((m) => m.id === flash.fromId)} onDismiss={onFlashDismiss} />}
+      {idle && (
+        <IdleScreen
+          db={db}
+          weather={weather}
+          city={city}
+          onWake={wake}
+          rotateMs={10_000}
+          revealMs={5_000}
+          hint="Devam etmek için kumandada bir tuşa basın"
+        />
+      )}
     </div>
   )
 }
+
+const TV_IDLE_MIN = 5
 
 function StatusPill({ now, weather, city, status }: { now: Date; weather: WeatherData | null; city: string; status: SyncStatus }) {
   return (

@@ -26,11 +26,19 @@ export function IdleScreen({
   weather,
   city,
   onWake,
+  rotateMs = ROTATE_MS,
+  revealMs = REVEAL_MS,
+  hint = 'Uyandırmak için dokunun',
 }: {
   db: DB
   weather: WeatherData | null
   city: string
   onWake: () => void
+  /** Kelime ne kadar ekranda kalır (TV: 10 sn) */
+  rotateMs?: number
+  /** Anlam kaçıncı ms'de belirir (TV: 5 sn) */
+  revealMs?: number
+  hint?: string
 }) {
   const now = useClock(1000)
   const [index, setIndex] = useState(0)
@@ -50,14 +58,14 @@ export function IdleScreen({
     const id = setInterval(() => {
       setIndex((i) => (i + 1) % list.length)
       setRevealed(false)
-    }, ROTATE_MS)
+    }, rotateMs)
     return () => clearInterval(id)
-  }, [list.length])
+  }, [list.length, rotateMs])
 
   useEffect(() => {
-    const t = setTimeout(() => setRevealed(true), REVEAL_MS)
+    const t = setTimeout(() => setRevealed(true), revealMs)
     return () => clearTimeout(t)
-  }, [index])
+  }, [index, revealMs])
 
   const card = list[index % Math.max(1, list.length)] as Word | { term: string; meaning: string }
   const deck = 'deck' in card ? card.deck : 'Kelime'
@@ -194,7 +202,7 @@ export function IdleScreen({
         </div>
       </div>
 
-      <div className="absolute bottom-2 left-0 right-0 text-center text-[11px] text-white/40">Uyandırmak için dokunun</div>
+      <div className="absolute bottom-2 left-0 right-0 text-center text-[11px] text-white/40">{hint}</div>
     </div>
   )
 }

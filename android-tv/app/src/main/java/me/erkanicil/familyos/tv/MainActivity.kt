@@ -51,6 +51,9 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (BuildConfig.DEBUG) WebView.setWebContentsDebuggingEnabled(true) // chrome://inspect
+        // Launcher ekrandayken stick uykuya geçmesin (ekran koruyucuyu sayfa kendisi gösterir).
+        // TV kumandayla kapatılınca sistem yine normal kapanır; başka uygulamada bayrak geçerli değil.
+        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         root = FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
         setContentView(root)
         createWebView()
