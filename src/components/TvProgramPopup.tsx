@@ -29,8 +29,19 @@ export function TvProgramPopup({
   const kid = db.members.find((m) => m.id === kidId)
   const today = ((now.getDay() + 6) % 7) + 1 // 1 = Pazartesi
 
+  // Pencereyi açan düğme (ilk çizimde, odak henüz kaymadan): kapanınca odak ona döner.
+  // Yoksa odak boşta kalıyor, sonraki tuş en baştaki TiviMate'e gidip OK ile onu açıyordu.
+  const opener = useRef<Element | null>(typeof document !== 'undefined' ? document.activeElement : null)
+
   useEffect(() => {
     closeRef.current?.focus({ preventScroll: true })
+    return () => {
+      const el = opener.current as HTMLElement | null
+      if (el && document.contains(el)) el.focus({ preventScroll: true })
+    }
+  }, [])
+
+  useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
     }
@@ -110,7 +121,8 @@ function LessonsGrid({ db, kidId, today, now }: { db: DB; kidId: string; today: 
               >
                 {l ? (
                   <>
-                    <span className="text-[16px] font-semibold line-clamp-2">{l.subject}</span>
+                    {/* Uzun ad ("Kültür ve Medeniyetimize Yön Verenler") kesilmesin: küçük yazı, 3 satır */}
+                    <span className={cx('font-semibold', l.subject.length > 30 ? 'text-[14px] line-clamp-3' : 'text-[16px] line-clamp-2')}>{l.subject}</span>
                     {l.room && <span className="mt-0.5 text-[12.5px] text-white/50 truncate max-w-full">{l.room}</span>}
                   </>
                 ) : (
