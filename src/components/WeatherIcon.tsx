@@ -1,5 +1,6 @@
 import { cx } from './ui'
 import { wmoGroup } from '../lib/openMeteo'
+import { TV } from '../lib/tv'
 
 /**
  * Animasyonlu SVG hava ikonları (emoji yerine — daha şık ve tutarlı).
@@ -21,16 +22,20 @@ export function WeatherIcon({
   const Sun = ({ small = false }: { small?: boolean }) => (
     <g>
       <circle cx="32" cy="32" r={small ? 9 : 11} fill="#fde68a" stroke="#fbbf24" strokeWidth="2" />
-      {/* SMIL ile dönüş (transform-origin kaynaklı titreme olmaz) */}
+      {/* SMIL ile dönüş (transform-origin kaynaklı titreme olmaz).
+          TV'de yok: SMIL, CSS'teki animation:none kuralından etkilenmez; stick'te ekranı
+          saniyede ~19 kez yeniden çizdirip saati geciktiriyordu. */}
       <g stroke="#fcd34d" strokeWidth="3" strokeLinecap="round">
-        <animateTransform
-          attributeName="transform"
-          type="rotate"
-          from="0 32 32"
-          to="360 32 32"
-          dur="22s"
-          repeatCount="indefinite"
-        />
+        {!TV && (
+          <animateTransform
+            attributeName="transform"
+            type="rotate"
+            from="0 32 32"
+            to="360 32 32"
+            dur="22s"
+            repeatCount="indefinite"
+          />
+        )}
         {[0, 45, 90, 135, 180, 225, 270, 315].map((deg) => {
           const r1 = small ? 12 : 15
           const r2 = small ? 17 : 21

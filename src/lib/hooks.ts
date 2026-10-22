@@ -44,24 +44,23 @@ export function useClock(intervalMs = 1000): Date {
   useEffect(() => {
     if (TV && intervalMs < 60_000) {
       // TV'de saniye gösterilmez: dakika başına hizalı, dakikada bir çizim (CPU dostu)
-      let id: ReturnType<typeof setInterval> | undefined
+      // Her tikte bir sonraki dakika başına yeniden hesaplanan zincir (setInterval değil):
+      // zamanlayıcı geciktiğinde (yoğun işlemci, uyku) hata birikmez, sonraki tikte düzelir.
       let t: ReturnType<typeof setTimeout> | undefined
       const align = () => {
-        setNow(clockNow())
         clearTimeout(t)
-        clearInterval(id)
-        t = setTimeout(() => {
-          setNow(clockNow())
-          id = setInterval(() => setNow(clockNow()), 60_000)
-        }, 60_000 - (Date.now() % 60_000) + 50)
+        setNow(clockNow())
+        t = setTimeout(align, 60_000 - (Date.now() % 60_000) + 50)
       }
       align()
-      // TiviMate/YouTube'dan dönünce zamanlayıcılar duraklatılmıştı: hemen güncelle, yeniden hizala
+      // TiviMate/YouTube'dan dönünce ya da sayfa yeniden görünür olunca hemen güncelle
+      const onVisible = () => document.visibilityState === 'visible' && align()
       window.addEventListener('familyos:resume', align)
+      document.addEventListener('visibilitychange', onVisible)
       return () => {
         window.removeEventListener('familyos:resume', align)
+        document.removeEventListener('visibilitychange', onVisible)
         clearTimeout(t)
-        clearInterval(id)
       }
     }
     const id = setInterval(() => setNow(clockNow()), intervalMs)

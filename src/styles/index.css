@@ -584,6 +584,30 @@ html.tv .tv-tile:focus {
   transform: translateY(-0.06em);
 }
 
+/* Çocuk programı penceresi (TvProgramPopup): opak sıcak zemin, blur yok */
+.tv-program {
+  background: #17110f;
+}
+/* Program ikonları (küçük, üst üste): odakta adı sağında belirir */
+html.tv .tv-mini {
+  position: relative;
+}
+html.tv .tv-mini:focus::after {
+  content: attr(title);
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 50%;
+  transform: translateY(-50%);
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(23, 17, 15, 0.9);
+  padding: 4px 10px;
+  border-radius: 999px;
+  pointer-events: none;
+}
+
 /* Alttaki bölüm satırı: yalnızca glif (+ sayı); ad odakta belirir */
 html.tv .tv-glyph .tv-glyph-label {
   display: none;

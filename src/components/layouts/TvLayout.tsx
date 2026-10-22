@@ -1,4 +1,6 @@
 import {
+  BowlFoodIcon,
+  ChalkboardTeacherIcon,
   BasketIcon,
   BookOpenIcon,
   QuotesIcon,
@@ -16,6 +18,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { cx } from '../ui'
 import { WeatherIcon } from '../WeatherIcon'
 import { IdleScreen, MessageFlash } from '../IdleScreen'
+import { TvProgramPopup, type TvProgramKind } from '../TvProgramPopup'
 import { useClock, useIdle } from '../../lib/hooks'
 import { dateKey, fmtDayName, fmtMonth, fmtTime, pad, todayKey, relativeTime } from '../../lib/time'
 import { greetingFor } from '../../lib/specialDays'
@@ -89,6 +92,8 @@ export function TvLayout({
   const section = SECTIONS.find((s) => s.key === tab)
   // Ana ekranda odaklanılan bölüm (null: uygulamalar / özet). Özet görünürken saat-hava sağda büyük durur.
   const [homeFocus, setHomeFocus] = useState<SectionKey | null>(null)
+  // Çocuk programı penceresi (alttaki iki küçük ikon)
+  const [program, setProgram] = useState<{ kind: TvProgramKind; kidId: string } | null>(null)
   const showStatus = !!section || homeFocus !== null
 
   // Ekran koruyucu: 5 dk tuşa basılmazsa kelime ekranı (stick uyumaz: MainActivity ekranı açık tutar)
@@ -133,13 +138,23 @@ export function TvLayout({
         </main>
       ) : (
         <>
-          <TvHome db={db} now={now} weather={weather} status={status} onTab={onTab} focus={homeFocus} setFocus={setHomeFocus} />
+          <TvHome
+            db={db}
+            now={now}
+            weather={weather}
+            status={status}
+            onTab={onTab}
+            focus={homeFocus}
+            setFocus={setHomeFocus}
+            onProgram={(kind, kidId) => setProgram({ kind, kidId })}
+          />
           {/* Ana ekranda da senkron uyarıları / aile kodu penceresi */}
           <div className="absolute left-16 right-16 bottom-4">{children}</div>
         </>
       )}
 
       {flash && <MessageFlash message={flash} member={db.members.find((m) => m.id === flash.fromId)} onDismiss={onFlashDismiss} />}
+      {program && <TvProgramPopup db={db} kind={program.kind} kidId={program.kidId} now={now} onClose={() => setProgram(null)} />}
       {idle && (
         <IdleScreen
           db={db}
@@ -234,6 +249,7 @@ function TvHome({
   onTab,
   focus,
   setFocus,
+  onProgram,
 }: {
   db: DB
   now: Date
@@ -242,6 +258,7 @@ function TvHome({
   onTab: (t: TabKey) => void
   focus: SectionKey | null
   setFocus: (k: SectionKey | null) => void
+  onProgram: (kind: TvProgramKind, kidId: string) => void
 }) {
   const apps = useMemo(tvApps, [])
   const firstRef = useRef<HTMLButtonElement>(null)
@@ -257,6 +274,18 @@ function TvHome({
   }, [])
 
   const s = useSummary(db, now)
+  // Program ikonları: beslenme → beslenme programı en dolu çocuk, ders → ders programı en dolu çocuk
+  const programKids = useMemo(() => {
+    const most = (list: { memberId: string }[]) => {
+      const c = new Map<string, number>()
+      for (const x of list) c.set(x.memberId, (c.get(x.memberId) ?? 0) + 1)
+      return [...c].sort((a, b) => b[1] - a[1])[0]?.[0]
+    }
+    const name = (id?: string) => db.members.find((m) => m.id === id)?.name
+    const nu = most(db.nutrition)
+    const ls = most(db.lessons)
+    return { nutrition: nu ? { id: nu, name: name(nu) } : null, lessons: ls ? { id: ls, name: name(ls) } : null }
+  }, [db.nutrition, db.lessons, db.members])
   const badges: Partial<Record<SectionKey, number>> = {
     calendar: s.events.length,
     chores: s.choresLeft.length,
@@ -314,6 +343,35 @@ function TvHome({
               </button>
             )
           })}
+          {/* Ayarların yanında üst üste iki küçük ikon: çocukların haftalık programları */}
+          {(programKids.nutrition || programKids.lessons) && (
+            <span className="ml-1 flex flex-col gap-1">
+              {programKids.nutrition && (
+                <button
+                  type="button"
+                  title={`${programKids.nutrition.name} · Beslenme programı`}
+                  aria-label={`${programKids.nutrition.name} beslenme programı`}
+                  className="tv-glyph tv-mini h-[21px] w-[34px] rounded-full grid place-items-center text-white/55"
+                  onFocus={() => setFocus(null)}
+                  onClick={() => onProgram('nutrition', programKids.nutrition!.id)}
+                >
+                  <BowlFoodIcon weight="fill" className="w-[14px] h-[14px]" />
+                </button>
+              )}
+              {programKids.lessons && (
+                <button
+                  type="button"
+                  title={`${programKids.lessons.name} · Ders programı`}
+                  aria-label={`${programKids.lessons.name} ders programı`}
+                  className="tv-glyph tv-mini h-[21px] w-[34px] rounded-full grid place-items-center text-white/55"
+                  onFocus={() => setFocus(null)}
+                  onClick={() => onProgram('lessons', programKids.lessons!.id)}
+                >
+                  <ChalkboardTeacherIcon weight="fill" className="w-[14px] h-[14px]" />
+                </button>
+              )}
+            </span>
+          )}
         </nav>
         <div className="flex gap-5 text-[13px] font-semibold text-white/35 shrink-0">
           <span>
