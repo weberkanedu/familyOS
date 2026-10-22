@@ -523,7 +523,9 @@ function genitive(name: string): string {
   return `${name}’${vowels.includes(lower.slice(-1)) ? 'n' : ''}${v}n`
 }
 
-const lowerFirst = (t: string) => t.charAt(0).toLocaleLowerCase('tr') + t.slice(1)
+/** Cümle içine alırken ilk harfi küçült; ad zaten Büyük Harfli Kelimelerden oluşuyorsa
+ *  ("Kırpık Börek, Peynir") olduğu gibi bırak — yoksa "kırpık Börek" gibi tutarsız olur */
+const lowerFirst = (t: string) => (/\s\p{Lu}/u.test(t) ? t : t.charAt(0).toLocaleLowerCase('tr') + t.slice(1))
 
 function durationText(min: number): string {
   if (min < 60) return `${min} dakika`
