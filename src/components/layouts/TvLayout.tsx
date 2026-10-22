@@ -553,29 +553,55 @@ function atTime(d: Date): string {
   return `${pad(hh)}:${pad(mm)}’${suffix}`
 }
 
+/** Akşam ezanından sonra özet (namaz cümlesi hariç) yarına odaklanır */
+function isEvening(now: Date, lat: number, lon: number): boolean {
+  return now.getTime() >= prayerTimes(now, lat, lon).aksam.getTime()
+}
+
+function eventSentence(prefix: string, e: DB['events'][number], s: Summary): Seg[] {
+  const owner = e.memberIds.length === 1 ? s.member.get(e.memberIds[0])?.name : undefined
+  const what = owner && !/[’']/.test(e.title) ? `${genitive(owner)} ${lowerFirst(e.title)}` : e.title
+  return [{ t: prefix }, { t: what, hl: true }, { t: e.allDay ? '.' : `, saat ${atTime(new Date(e.start))}.` }]
+}
+
 function daySentences(s: Summary, now: Date, lat: number, lon: number): Seg[][] {
   const out: Seg[][] = []
   const p = nextPrayer(now, lat, lon)
   const left = Math.max(1, Math.round((p.at.getTime() - now.getTime()) / 60_000))
   if (left <= 180) out.push([{ t: `${PRAYER_PHRASE[p.key]} ` }, { t: durationText(left), hl: true }, { t: ' var.' }])
 
-  const next = s.upcoming.find((e) => !e.allDay)
-  if (next) {
-    const owner = next.memberIds.length === 1 ? s.member.get(next.memberIds[0])?.name : undefined
-    const what = owner && !/[’']/.test(next.title) ? `${genitive(owner)} ${lowerFirst(next.title)}` : next.title
-    out.push([{ t: 'Sıradaki: ' }, { t: what, hl: true }, { t: `, saat ${atTime(new Date(next.start))}.` }])
+  if (isEvening(now, lat, lon)) {
+    // Akşam: yarının ilk etkinliği (+ kaç tane daha) ve yarının sofrası
+    const first = s.tomorrow[0]
+    if (first) {
+      const segs = eventSentence('Yarın ', first, s)
+      if (s.tomorrow.length > 1) segs.push({ t: ` Gün boyu ${s.tomorrow.length} etkinlik var.` })
+      out.push(segs)
+    }
+    const tm = s.tomorrowMeals
+    const meal = tm.find((m) => m.key === 'breakfast' && m.title) ?? tm.find((m) => m.key === 'dinner' && m.title)
+    if (meal?.title) {
+      out.push([{ t: meal.key === 'breakfast' ? 'Yarın kahvaltıda ' : 'Yarın akşam sofrada ' }, { t: lowerFirst(meal.title), hl: true }, { t: ' var.' }])
+    }
+    if (!first && !meal?.title) out.push([{ t: 'Yarın için plan yok. ' }, { t: 'İyi dinlenmeler.', hl: true }])
+    return out.slice(0, 3)
   }
 
+  const next = s.upcoming.find((e) => !e.allDay)
+  if (next) out.push(eventSentence('Sıradaki: ', next, s))
+
   const dinner = s.meals.find((m) => m.key === 'dinner')?.title
-  if (dinner && now.getHours() < 21) out.push([{ t: 'Bu akşam sofrada ' }, { t: lowerFirst(dinner), hl: true }, { t: ' var.' }])
+  if (dinner) out.push([{ t: 'Bu akşam sofrada ' }, { t: lowerFirst(dinner), hl: true }, { t: ' var.' }])
 
   if (!out.length) out.push([{ t: 'Bugün ev sakin. ' }, { t: 'İyi dinlenmeler.', hl: true }])
   return out.slice(0, 3)
 }
 
-function dayFootnote(s: Summary): string {
+function dayFootnote(s: Summary, evening: boolean): string {
   const parts: string[] = []
-  if (s.choresLeft.length) parts.push(`${s.choresLeft.length} görev bekliyor`)
+  if (evening) {
+    if (s.tomorrowChores.length) parts.push(`yarın ${s.tomorrowChores.length} görev var`)
+  } else if (s.choresLeft.length) parts.push(`${s.choresLeft.length} görev bekliyor`)
   if (s.shopping.length) {
     const names = s.shopping.slice(0, 3).map((i) => lowerFirst(i.text))
     parts.push(`marketten ${names.join(', ')}${s.shopping.length > 3 ? ` ve ${s.shopping.length - 3} ürün daha` : ''} alınacak`)
@@ -617,11 +643,15 @@ function MessageTicker({ items }: { items: string[] }) {
 
 function DayHero({ s, now, weather, lat, lon }: { s: Summary; now: Date; weather: WeatherData | null; lat: number; lon: number }) {
   const lines = daySentences(s, now, lat, lon)
-  const foot = dayFootnote(s)
+  const evening = isEvening(now, lat, lon)
+  const foot = dayFootnote(s, evening)
   return (
     <>
       <div className="flex-1 min-w-0 max-w-[820px]">
-        <div className="text-[15px] font-semibold tracking-[0.08em] text-[#f6c58a]/80">{tvGreeting(now)}</div>
+        <div className="text-[15px] font-semibold tracking-[0.08em] text-[#f6c58a]/80">
+          {tvGreeting(now)}
+          {evening && <span className="text-white/45"> · yarının programı</span>}
+        </div>
         <h1 className="mt-3 text-[40px] leading-[1.22] font-semibold tracking-[-0.01em]">
           {lines.map((segs, i) => (
             <span key={i}>
@@ -957,6 +987,12 @@ function useSummary(db: DB, now: Date) {
         title: db.meals.find((m) => m.date === today && m.slot === sl.key)?.title,
       })),
       tomorrowDinner: db.meals.find((m) => m.date === tomorrowKey && m.slot === 'dinner')?.title,
+      tomorrowMeals: MEAL_SLOTS.map((sl) => ({
+        key: sl.key,
+        label: sl.label,
+        title: db.meals.find((m) => m.date === tomorrowKey && m.slot === sl.key)?.title,
+      })),
+      tomorrowChores: db.chores.filter((c) => isChoreDueToday(c, tomorrowKey)),
       word: [...db.words].sort((a, b) => a.dueAt - b.dueAt)[0],
       dueWords: db.words.filter((w) => w.dueAt <= t).length,
       lastMsgs: db.messages.slice(-3).reverse(),
