@@ -1,115 +1,506 @@
 {
   "deck": "6. Sınıf İngilizce",
-  "note": "MEB 6. sınıf İngilizce ünitelerine göre 100 kelime. Sunucuya yüklemek için: node scripts/push-words.mjs content/kelimeler-6-sinif.json",
+  "note": "MEB 6. sınıf İngilizce ünitelerine göre 100 kelime (zorlaştırılmış: en kolay 65 kelime yerine aynı ünitelerden daha ileri düzey kelimeler). Sunucuya yüklemek için: node scripts/push-words.mjs content/kelimeler-6-sinif.json",
   "words": [
-    { "term": "wake up", "meaning": "uyanmak", "unit": "Life" },
-    { "term": "get up", "meaning": "(yataktan) kalkmak", "unit": "Life" },
-    { "term": "get dressed", "meaning": "giyinmek", "unit": "Life" },
-    { "term": "brush teeth", "meaning": "dişlerini fırçalamak", "unit": "Life" },
-    { "term": "have breakfast", "meaning": "kahvaltı yapmak", "unit": "Life" },
-    { "term": "do homework", "meaning": "ödev yapmak", "unit": "Life" },
-    { "term": "go to bed", "meaning": "yatmak", "unit": "Life" },
-    { "term": "always", "meaning": "her zaman", "unit": "Life" },
-    { "term": "usually", "meaning": "genellikle", "unit": "Life" },
-    { "term": "often", "meaning": "sık sık", "unit": "Life" },
-    { "term": "sometimes", "meaning": "bazen", "unit": "Life" },
-    { "term": "never", "meaning": "asla, hiçbir zaman", "unit": "Life" },
-    { "term": "early", "meaning": "erken", "unit": "Life" },
-    { "term": "late", "meaning": "geç", "unit": "Life" },
-
-    { "term": "bread", "meaning": "ekmek", "unit": "Yummy Breakfast" },
-    { "term": "cheese", "meaning": "peynir", "unit": "Yummy Breakfast" },
-    { "term": "olive", "meaning": "zeytin", "unit": "Yummy Breakfast" },
-    { "term": "honey", "meaning": "bal", "unit": "Yummy Breakfast" },
-    { "term": "jam", "meaning": "reçel", "unit": "Yummy Breakfast" },
-    { "term": "butter", "meaning": "tereyağı", "unit": "Yummy Breakfast" },
-    { "term": "boiled egg", "meaning": "haşlanmış yumurta", "unit": "Yummy Breakfast" },
-    { "term": "cucumber", "meaning": "salatalık", "unit": "Yummy Breakfast" },
-    { "term": "orange juice", "meaning": "portakal suyu", "unit": "Yummy Breakfast" },
-    { "term": "delicious", "meaning": "lezzetli", "unit": "Yummy Breakfast" },
-    { "term": "hungry", "meaning": "aç", "unit": "Yummy Breakfast" },
-    { "term": "thirsty", "meaning": "susamış", "unit": "Yummy Breakfast" },
-
-    { "term": "bakery", "meaning": "fırın, pastane", "unit": "Downtown" },
-    { "term": "pharmacy", "meaning": "eczane", "unit": "Downtown" },
-    { "term": "library", "meaning": "kütüphane", "unit": "Downtown" },
-    { "term": "museum", "meaning": "müze", "unit": "Downtown" },
-    { "term": "post office", "meaning": "postane", "unit": "Downtown" },
-    { "term": "bus stop", "meaning": "otobüs durağı", "unit": "Downtown" },
-    { "term": "crowded", "meaning": "kalabalık", "unit": "Downtown" },
-    { "term": "quiet", "meaning": "sessiz, sakin", "unit": "Downtown" },
-    { "term": "noisy", "meaning": "gürültülü", "unit": "Downtown" },
-    { "term": "dangerous", "meaning": "tehlikeli", "unit": "Downtown" },
-    { "term": "safe", "meaning": "güvenli", "unit": "Downtown" },
-    { "term": "expensive", "meaning": "pahalı", "unit": "Downtown" },
-    { "term": "cheap", "meaning": "ucuz", "unit": "Downtown" },
-
-    { "term": "sunny", "meaning": "güneşli", "unit": "Weather and Emotions" },
-    { "term": "rainy", "meaning": "yağmurlu", "unit": "Weather and Emotions" },
-    { "term": "cloudy", "meaning": "bulutlu", "unit": "Weather and Emotions" },
-    { "term": "windy", "meaning": "rüzgârlı", "unit": "Weather and Emotions" },
-    { "term": "snowy", "meaning": "karlı", "unit": "Weather and Emotions" },
-    { "term": "foggy", "meaning": "sisli", "unit": "Weather and Emotions" },
-    { "term": "stormy", "meaning": "fırtınalı", "unit": "Weather and Emotions" },
-    { "term": "happy", "meaning": "mutlu", "unit": "Weather and Emotions" },
-    { "term": "sad", "meaning": "üzgün", "unit": "Weather and Emotions" },
-    { "term": "angry", "meaning": "kızgın", "unit": "Weather and Emotions" },
-    { "term": "bored", "meaning": "sıkılmış", "unit": "Weather and Emotions" },
-    { "term": "excited", "meaning": "heyecanlı", "unit": "Weather and Emotions" },
-    { "term": "scared", "meaning": "korkmuş", "unit": "Weather and Emotions" },
-    { "term": "tired", "meaning": "yorgun", "unit": "Weather and Emotions" },
-    { "term": "worried", "meaning": "endişeli", "unit": "Weather and Emotions" },
-
-    { "term": "roller coaster", "meaning": "hız treni", "unit": "At the Fair" },
-    { "term": "ferris wheel", "meaning": "dönme dolap", "unit": "At the Fair" },
-    { "term": "bumper cars", "meaning": "çarpışan arabalar", "unit": "At the Fair" },
-    { "term": "ticket", "meaning": "bilet", "unit": "At the Fair" },
-    { "term": "scary", "meaning": "korkutucu", "unit": "At the Fair" },
-    { "term": "exciting", "meaning": "heyecan verici", "unit": "At the Fair" },
-    { "term": "boring", "meaning": "sıkıcı", "unit": "At the Fair" },
-    { "term": "funny", "meaning": "komik", "unit": "At the Fair" },
-
-    { "term": "firefighter", "meaning": "itfaiyeci", "unit": "Occupations" },
-    { "term": "police officer", "meaning": "polis memuru", "unit": "Occupations" },
-    { "term": "engineer", "meaning": "mühendis", "unit": "Occupations" },
-    { "term": "architect", "meaning": "mimar", "unit": "Occupations" },
-    { "term": "dentist", "meaning": "diş hekimi", "unit": "Occupations" },
-    { "term": "farmer", "meaning": "çiftçi", "unit": "Occupations" },
-    { "term": "vet", "meaning": "veteriner", "unit": "Occupations" },
-    { "term": "journalist", "meaning": "gazeteci", "unit": "Occupations" },
-    { "term": "lawyer", "meaning": "avukat", "unit": "Occupations" },
-    { "term": "mechanic", "meaning": "tamirci", "unit": "Occupations" },
-
-    { "term": "holiday", "meaning": "tatil", "unit": "Holidays" },
-    { "term": "beach", "meaning": "plaj, sahil", "unit": "Holidays" },
-    { "term": "sunbathe", "meaning": "güneşlenmek", "unit": "Holidays" },
-    { "term": "travel", "meaning": "seyahat etmek", "unit": "Holidays" },
-    { "term": "abroad", "meaning": "yurt dışı(nda)", "unit": "Holidays" },
-    { "term": "suitcase", "meaning": "bavul", "unit": "Holidays" },
-    { "term": "souvenir", "meaning": "hatıra eşya", "unit": "Holidays" },
-    { "term": "go camping", "meaning": "kampa gitmek", "unit": "Holidays" },
-
-    { "term": "novel", "meaning": "roman", "unit": "Bookworms" },
-    { "term": "fairy tale", "meaning": "masal", "unit": "Bookworms" },
-    { "term": "poem", "meaning": "şiir", "unit": "Bookworms" },
-    { "term": "author", "meaning": "yazar", "unit": "Bookworms" },
-    { "term": "adventure", "meaning": "macera", "unit": "Bookworms" },
-    { "term": "borrow", "meaning": "ödünç almak", "unit": "Bookworms" },
-
-    { "term": "recycle", "meaning": "geri dönüştürmek", "unit": "Saving the Planet" },
-    { "term": "environment", "meaning": "çevre", "unit": "Saving the Planet" },
-    { "term": "pollution", "meaning": "kirlilik", "unit": "Saving the Planet" },
-    { "term": "waste", "meaning": "atık; israf etmek", "unit": "Saving the Planet" },
-    { "term": "protect", "meaning": "korumak", "unit": "Saving the Planet" },
-    { "term": "reduce", "meaning": "azaltmak", "unit": "Saving the Planet" },
-    { "term": "reuse", "meaning": "yeniden kullanmak", "unit": "Saving the Planet" },
-    { "term": "nature", "meaning": "doğa", "unit": "Saving the Planet" },
-
-    { "term": "election", "meaning": "seçim", "unit": "Democracy" },
-    { "term": "vote", "meaning": "oy vermek; oy", "unit": "Democracy" },
-    { "term": "candidate", "meaning": "aday", "unit": "Democracy" },
-    { "term": "rule", "meaning": "kural", "unit": "Democracy" },
-    { "term": "respect", "meaning": "saygı; saygı duymak", "unit": "Democracy" },
-    { "term": "equal", "meaning": "eşit", "unit": "Democracy" }
+    {
+      "term": "rarely",
+      "meaning": "nadiren",
+      "unit": "Life"
+    },
+    {
+      "term": "hardly ever",
+      "meaning": "neredeyse hiç",
+      "unit": "Life"
+    },
+    {
+      "term": "once a week",
+      "meaning": "haftada bir",
+      "unit": "Life"
+    },
+    {
+      "term": "twice a month",
+      "meaning": "ayda iki kez",
+      "unit": "Life"
+    },
+    {
+      "term": "daily routine",
+      "meaning": "günlük rutin",
+      "unit": "Life"
+    },
+    {
+      "term": "take a shower",
+      "meaning": "duş almak",
+      "unit": "Life"
+    },
+    {
+      "term": "get ready",
+      "meaning": "hazırlanmak",
+      "unit": "Life"
+    },
+    {
+      "term": "tidy up",
+      "meaning": "toplamak, düzenlemek",
+      "unit": "Life"
+    },
+    {
+      "term": "set the table",
+      "meaning": "sofrayı kurmak",
+      "unit": "Life"
+    },
+    {
+      "term": "sausage",
+      "meaning": "sucuk, sosis",
+      "unit": "Yummy Breakfast"
+    },
+    {
+      "term": "pastry",
+      "meaning": "hamur işi, börek",
+      "unit": "Yummy Breakfast"
+    },
+    {
+      "term": "cereal",
+      "meaning": "tahıl gevreği",
+      "unit": "Yummy Breakfast"
+    },
+    {
+      "term": "molasses",
+      "meaning": "pekmez",
+      "unit": "Yummy Breakfast"
+    },
+    {
+      "term": "fried egg",
+      "meaning": "sahanda yumurta",
+      "unit": "Yummy Breakfast"
+    },
+    {
+      "term": "nutritious",
+      "meaning": "besleyici",
+      "unit": "Yummy Breakfast"
+    },
+    {
+      "term": "a slice of",
+      "meaning": "bir dilim",
+      "unit": "Yummy Breakfast"
+    },
+    {
+      "term": "a bowl of",
+      "meaning": "bir kâse",
+      "unit": "Yummy Breakfast"
+    },
+    {
+      "term": "pharmacy",
+      "meaning": "eczane",
+      "unit": "Downtown"
+    },
+    {
+      "term": "crowded",
+      "meaning": "kalabalık",
+      "unit": "Downtown"
+    },
+    {
+      "term": "dangerous",
+      "meaning": "tehlikeli",
+      "unit": "Downtown"
+    },
+    {
+      "term": "expensive",
+      "meaning": "pahalı",
+      "unit": "Downtown"
+    },
+    {
+      "term": "town hall",
+      "meaning": "belediye binası",
+      "unit": "Downtown"
+    },
+    {
+      "term": "pedestrian",
+      "meaning": "yaya",
+      "unit": "Downtown"
+    },
+    {
+      "term": "neighbourhood",
+      "meaning": "mahalle",
+      "unit": "Downtown"
+    },
+    {
+      "term": "skyscraper",
+      "meaning": "gökdelen",
+      "unit": "Downtown"
+    },
+    {
+      "term": "public transport",
+      "meaning": "toplu taşıma",
+      "unit": "Downtown"
+    },
+    {
+      "term": "underground",
+      "meaning": "metro",
+      "unit": "Downtown"
+    },
+    {
+      "term": "traffic jam",
+      "meaning": "trafik sıkışıklığı",
+      "unit": "Downtown"
+    },
+    {
+      "term": "foggy",
+      "meaning": "sisli",
+      "unit": "Weather and Emotions"
+    },
+    {
+      "term": "stormy",
+      "meaning": "fırtınalı",
+      "unit": "Weather and Emotions"
+    },
+    {
+      "term": "excited",
+      "meaning": "heyecanlı",
+      "unit": "Weather and Emotions"
+    },
+    {
+      "term": "worried",
+      "meaning": "endişeli",
+      "unit": "Weather and Emotions"
+    },
+    {
+      "term": "freezing",
+      "meaning": "dondurucu soğuk",
+      "unit": "Weather and Emotions"
+    },
+    {
+      "term": "humid",
+      "meaning": "nemli",
+      "unit": "Weather and Emotions"
+    },
+    {
+      "term": "temperature",
+      "meaning": "sıcaklık",
+      "unit": "Weather and Emotions"
+    },
+    {
+      "term": "forecast",
+      "meaning": "hava tahmini",
+      "unit": "Weather and Emotions"
+    },
+    {
+      "term": "lightning",
+      "meaning": "şimşek",
+      "unit": "Weather and Emotions"
+    },
+    {
+      "term": "thunder",
+      "meaning": "gök gürültüsü",
+      "unit": "Weather and Emotions"
+    },
+    {
+      "term": "nervous",
+      "meaning": "gergin, sinirli",
+      "unit": "Weather and Emotions"
+    },
+    {
+      "term": "upset",
+      "meaning": "üzgün, morali bozuk",
+      "unit": "Weather and Emotions"
+    },
+    {
+      "term": "confused",
+      "meaning": "kafası karışık",
+      "unit": "Weather and Emotions"
+    },
+    {
+      "term": "proud",
+      "meaning": "gururlu",
+      "unit": "Weather and Emotions"
+    },
+    {
+      "term": "roller coaster",
+      "meaning": "hız treni",
+      "unit": "At the Fair"
+    },
+    {
+      "term": "ferris wheel",
+      "meaning": "dönme dolap",
+      "unit": "At the Fair"
+    },
+    {
+      "term": "bumper cars",
+      "meaning": "çarpışan arabalar",
+      "unit": "At the Fair"
+    },
+    {
+      "term": "fortune teller",
+      "meaning": "falcı",
+      "unit": "At the Fair"
+    },
+    {
+      "term": "haunted house",
+      "meaning": "perili ev",
+      "unit": "At the Fair"
+    },
+    {
+      "term": "candy floss",
+      "meaning": "pamuk şeker",
+      "unit": "At the Fair"
+    },
+    {
+      "term": "merry-go-round",
+      "meaning": "atlı karınca",
+      "unit": "At the Fair"
+    },
+    {
+      "term": "thrilling",
+      "meaning": "çok heyecanlı, heyecan verici",
+      "unit": "At the Fair"
+    },
+    {
+      "term": "terrifying",
+      "meaning": "dehşet verici",
+      "unit": "At the Fair"
+    },
+    {
+      "term": "architect",
+      "meaning": "mimar",
+      "unit": "Occupations"
+    },
+    {
+      "term": "journalist",
+      "meaning": "gazeteci",
+      "unit": "Occupations"
+    },
+    {
+      "term": "lawyer",
+      "meaning": "avukat",
+      "unit": "Occupations"
+    },
+    {
+      "term": "mechanic",
+      "meaning": "tamirci",
+      "unit": "Occupations"
+    },
+    {
+      "term": "accountant",
+      "meaning": "muhasebeci",
+      "unit": "Occupations"
+    },
+    {
+      "term": "surgeon",
+      "meaning": "cerrah",
+      "unit": "Occupations"
+    },
+    {
+      "term": "pharmacist",
+      "meaning": "eczacı",
+      "unit": "Occupations"
+    },
+    {
+      "term": "tailor",
+      "meaning": "terzi",
+      "unit": "Occupations"
+    },
+    {
+      "term": "carpenter",
+      "meaning": "marangoz",
+      "unit": "Occupations"
+    },
+    {
+      "term": "plumber",
+      "meaning": "tesisatçı",
+      "unit": "Occupations"
+    },
+    {
+      "term": "electrician",
+      "meaning": "elektrikçi",
+      "unit": "Occupations"
+    },
+    {
+      "term": "translator",
+      "meaning": "çevirmen",
+      "unit": "Occupations"
+    },
+    {
+      "term": "sunbathe",
+      "meaning": "güneşlenmek",
+      "unit": "Holidays"
+    },
+    {
+      "term": "abroad",
+      "meaning": "yurt dışı(nda)",
+      "unit": "Holidays"
+    },
+    {
+      "term": "souvenir",
+      "meaning": "hatıra eşya",
+      "unit": "Holidays"
+    },
+    {
+      "term": "accommodation",
+      "meaning": "konaklama",
+      "unit": "Holidays"
+    },
+    {
+      "term": "sightseeing",
+      "meaning": "gezip görme",
+      "unit": "Holidays"
+    },
+    {
+      "term": "destination",
+      "meaning": "gidilecek yer, varış noktası",
+      "unit": "Holidays"
+    },
+    {
+      "term": "luggage",
+      "meaning": "bagaj, yolcu eşyası",
+      "unit": "Holidays"
+    },
+    {
+      "term": "historical",
+      "meaning": "tarihi",
+      "unit": "Holidays"
+    },
+    {
+      "term": "book a room",
+      "meaning": "oda ayırtmak",
+      "unit": "Holidays"
+    },
+    {
+      "term": "novel",
+      "meaning": "roman",
+      "unit": "Bookworms"
+    },
+    {
+      "term": "fairy tale",
+      "meaning": "masal",
+      "unit": "Bookworms"
+    },
+    {
+      "term": "author",
+      "meaning": "yazar",
+      "unit": "Bookworms"
+    },
+    {
+      "term": "adventure",
+      "meaning": "macera",
+      "unit": "Bookworms"
+    },
+    {
+      "term": "borrow",
+      "meaning": "ödünç almak",
+      "unit": "Bookworms"
+    },
+    {
+      "term": "chapter",
+      "meaning": "bölüm (kitap)",
+      "unit": "Bookworms"
+    },
+    {
+      "term": "plot",
+      "meaning": "olay örgüsü",
+      "unit": "Bookworms"
+    },
+    {
+      "term": "detective story",
+      "meaning": "dedektif hikâyesi",
+      "unit": "Bookworms"
+    },
+    {
+      "term": "science fiction",
+      "meaning": "bilim kurgu",
+      "unit": "Bookworms"
+    },
+    {
+      "term": "legend",
+      "meaning": "efsane",
+      "unit": "Bookworms"
+    },
+    {
+      "term": "publish",
+      "meaning": "yayımlamak",
+      "unit": "Bookworms"
+    },
+    {
+      "term": "recycle",
+      "meaning": "geri dönüştürmek",
+      "unit": "Saving the Planet"
+    },
+    {
+      "term": "environment",
+      "meaning": "çevre",
+      "unit": "Saving the Planet"
+    },
+    {
+      "term": "pollution",
+      "meaning": "kirlilik",
+      "unit": "Saving the Planet"
+    },
+    {
+      "term": "waste",
+      "meaning": "atık; israf etmek",
+      "unit": "Saving the Planet"
+    },
+    {
+      "term": "protect",
+      "meaning": "korumak",
+      "unit": "Saving the Planet"
+    },
+    {
+      "term": "reduce",
+      "meaning": "azaltmak",
+      "unit": "Saving the Planet"
+    },
+    {
+      "term": "reuse",
+      "meaning": "yeniden kullanmak",
+      "unit": "Saving the Planet"
+    },
+    {
+      "term": "renewable",
+      "meaning": "yenilenebilir",
+      "unit": "Saving the Planet"
+    },
+    {
+      "term": "global warming",
+      "meaning": "küresel ısınma",
+      "unit": "Saving the Planet"
+    },
+    {
+      "term": "endangered",
+      "meaning": "nesli tükenmekte olan",
+      "unit": "Saving the Planet"
+    },
+    {
+      "term": "election",
+      "meaning": "seçim",
+      "unit": "Democracy"
+    },
+    {
+      "term": "vote",
+      "meaning": "oy vermek; oy",
+      "unit": "Democracy"
+    },
+    {
+      "term": "candidate",
+      "meaning": "aday",
+      "unit": "Democracy"
+    },
+    {
+      "term": "respect",
+      "meaning": "saygı; saygı duymak",
+      "unit": "Democracy"
+    },
+    {
+      "term": "equal",
+      "meaning": "eşit",
+      "unit": "Democracy"
+    },
+    {
+      "term": "citizen",
+      "meaning": "vatandaş",
+      "unit": "Democracy"
+    },
+    {
+      "term": "majority",
+      "meaning": "çoğunluk",
+      "unit": "Democracy"
+    }
   ]
 }

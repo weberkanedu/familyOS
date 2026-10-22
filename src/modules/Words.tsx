@@ -5,6 +5,7 @@ import { addWord, deleteWord, importWords, reviewWord } from '../state/actions'
 import { buildQueue, fmtInterval, RATING_LABELS, stats, type Rating } from '../lib/anki'
 import { uiBus } from '../state/uiBus'
 import { Quiz } from './Quiz'
+import { TV } from '../lib/tv'
 import type { DB, Word } from '../types'
 
 interface Draft {
@@ -56,6 +57,17 @@ export function Words({ db, kiosk }: { db: DB; kiosk: boolean }) {
   const queue = useMemo(() => buildQueue(scoped, now), [scoped, Math.floor(now / 1000)])
   const st = useMemo(() => stats(scoped, now), [scoped, Math.floor(now / 30000)])
   const current = queue[0]
+
+  // TV (kumanda): kart gelince odak "Cevabı göster"de, anlam açılınca "İyi"de —
+  // art arda OK ile ilerlenir (önceden odak üstteki "Kelime Tekrarı" sekmesine düşüyordu)
+  useEffect(() => {
+    if (!TV || mode !== 'review' || !current) return
+    const t = setTimeout(() => {
+      const el = document.querySelector<HTMLElement>(revealed ? '[data-tv-rate="good"]' : '[data-tv-reveal]')
+      el?.focus({ preventScroll: true })
+    }, 30)
+    return () => clearTimeout(t)
+  }, [mode, current?.id, revealed])
 
   const rate = (r: Rating) => {
     if (!current) return
@@ -152,7 +164,7 @@ export function Words({ db, kiosk }: { db: DB; kiosk: boolean }) {
             </div>
 
             {!revealed ? (
-              <Btn size="lg" className="w-full" onClick={() => setRevealed(true)}>
+              <Btn size="lg" className="w-full" data-tv-reveal onClick={() => setRevealed(true)}>
                 <EyeIcon className="w-5 h-5" /> Cevabı göster
               </Btn>
             ) : (
@@ -169,6 +181,7 @@ export function Words({ db, kiosk }: { db: DB; kiosk: boolean }) {
                     <button
                       key={r}
                       type="button"
+                      data-tv-rate={r}
                       onClick={() => rate(r)}
                       className={cx(
                         'rounded-2xl border-2 p-4 font-extrabold transition-all touch-manipulation active:scale-[0.98]',

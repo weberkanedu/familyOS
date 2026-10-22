@@ -12,6 +12,26 @@ const DAYS = ['', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cuma
 
 export type TvProgramKind = 'lessons' | 'nutrition'
 
+/**
+ * Vurgulanacak gün: öğlen 12:00'ye kadar bugün, sonrası bir sonraki program günü
+ * (Cuma öğleden sonra → Pazartesi). Bugün programda yoksa da sıradaki gün.
+ */
+function focusDay(days: number[], now: Date): { day: number; label: string } {
+  const today = ((now.getDay() + 6) % 7) + 1 // 1 = Pazartesi
+  if (!days.length) return { day: today, label: `bugün ${DAYS[today]}` }
+  const from = now.getHours() >= 12 ? today + 1 : today
+  let day = days[0]
+  for (let k = 0; k < 7; k++) {
+    const d = ((from - 1 + k) % 7) + 1
+    if (days.includes(d)) {
+      day = d
+      break
+    }
+  }
+  const label = day === today ? `bugün ${DAYS[day]}` : day === (today % 7) + 1 ? `yarın ${DAYS[day]}` : DAYS[day]
+  return { day, label }
+}
+
 export function TvProgramPopup({
   db,
   kind,
@@ -27,7 +47,15 @@ export function TvProgramPopup({
 }) {
   const closeRef = useRef<HTMLButtonElement>(null)
   const kid = db.members.find((m) => m.id === kidId)
-  const today = ((now.getDay() + 6) % 7) + 1 // 1 = Pazartesi
+  const today = ((now.getDay() + 6) % 7) + 1 // 1 = Pazartesi (o an işlenen dersi işaretlemek için)
+  const days = useMemo(() => {
+    const list =
+      kind === 'lessons'
+        ? db.lessons.filter((l) => l.memberId === kidId).map((l) => l.day)
+        : db.nutrition.filter((n) => n.memberId === kidId).map((n) => n.weekday)
+    return [...new Set(list)].sort((a, b) => a - b)
+  }, [kind, db.lessons, db.nutrition, kidId])
+  const focus = focusDay(days, now)
 
   // Pencereyi açan düğme (ilk çizimde, odak henüz kaymadan): kapanınca odak ona döner.
   // Yoksa odak boşta kalıyor, sonraki tuş en baştaki TiviMate'e gidip OK ile onu açıyordu.
@@ -63,7 +91,7 @@ export function TvProgramPopup({
             <div className="text-[30px] font-semibold leading-tight">
               {kid?.name ?? 'Çocuk'} · {title}
             </div>
-            <div className="text-[15px] text-white/50">Haftalık · bugün {DAYS[today]}</div>
+            <div className="text-[15px] text-white/50">Haftalık · {focus.label}</div>
           </div>
         </div>
         <button ref={closeRef} type="button" onClick={onClose} className="tv-pill h-12 px-5 flex items-center gap-2 text-[16px] font-semibold">
@@ -71,12 +99,16 @@ export function TvProgramPopup({
           <span className="ml-1 text-white/45 font-normal">· Geri</span>
         </button>
       </header>
-      {kind === 'lessons' ? <LessonsGrid db={db} kidId={kidId} today={today} now={now} /> : <NutritionGrid db={db} kidId={kidId} today={today} />}
+      {kind === 'lessons' ? (
+        <LessonsGrid db={db} kidId={kidId} focusDay={focus.day} today={today} now={now} />
+      ) : (
+        <NutritionGrid db={db} kidId={kidId} focusDay={focus.day} />
+      )}
     </div>
   )
 }
 
-function LessonsGrid({ db, kidId, today, now }: { db: DB; kidId: string; today: number; now: Date }) {
+function LessonsGrid({ db, kidId, focusDay, today, now }: { db: DB; kidId: string; focusDay: number; today: number; now: Date }) {
   const { days, slots, cell } = useMemo(() => {
     const ls = db.lessons.filter((l) => l.memberId === kidId)
     const days = [...new Set(ls.map((l) => l.day))].sort((a, b) => a - b)
@@ -95,7 +127,7 @@ function LessonsGrid({ db, kidId, today, now }: { db: DB; kidId: string; today: 
     >
       <div />
       {days.map((d) => (
-        <div key={d} className={cx('grid place-items-center rounded-xl text-[17px] font-semibold', d === today ? 'bg-[#f6c58a] text-[#2a1a10]' : 'bg-white/[0.06] text-white/80')}>
+        <div key={d} className={cx('grid place-items-center rounded-xl text-[17px] font-semibold', d === focusDay ? 'bg-[#f6c58a] text-[#2a1a10]' : 'bg-white/[0.06] text-white/80')}>
           {DAYS[d]}
         </div>
       ))}
@@ -115,7 +147,7 @@ function LessonsGrid({ db, kidId, today, now }: { db: DB; kidId: string; today: 
                 key={d}
                 className={cx(
                   'rounded-xl px-3 flex flex-col items-center justify-center text-center leading-tight',
-                  d === today ? 'bg-white/[0.10]' : 'bg-white/[0.05]',
+                  d === focusDay ? 'bg-white/[0.10]' : 'bg-white/[0.05]',
                 )}
                 style={isNow ? { outline: '3px solid #f6c58a', outlineOffset: -3 } : undefined}
               >
@@ -142,7 +174,7 @@ function Row({ children }: { children: ReactNode }) {
   return <>{children}</>
 }
 
-function NutritionGrid({ db, kidId, today }: { db: DB; kidId: string; today: number }) {
+function NutritionGrid({ db, kidId, focusDay }: { db: DB; kidId: string; focusDay: number }) {
   const { days, byDay, sharedNote } = useMemo(() => {
     const items = db.nutrition.filter((n) => n.memberId === kidId).sort((a, b) => a.weekday - b.weekday || a.time.localeCompare(b.time))
     const notes = [...new Set(items.map((n) => n.note).filter(Boolean))] as string[]
@@ -163,9 +195,9 @@ function NutritionGrid({ db, kidId, today }: { db: DB; kidId: string; today: num
           // Gün içindeki öğünlerin saati aynıysa başlıkta bir kez, farklıysa her öğünün yanında
           const oneTime = list.every((n) => n.time === list[0].time)
           return (
-          <div key={d} className={cx('rounded-2xl p-5 flex flex-col gap-4', d === today ? 'bg-white/[0.11]' : 'bg-white/[0.05]')} style={d === today ? { outline: '3px solid #f6c58a', outlineOffset: -3 } : undefined}>
+          <div key={d} className={cx('rounded-2xl p-5 flex flex-col gap-4', d === focusDay ? 'bg-white/[0.11]' : 'bg-white/[0.05]')} style={d === focusDay ? { outline: '3px solid #f6c58a', outlineOffset: -3 } : undefined}>
             <div className="flex items-baseline justify-between">
-              <span className={cx('text-[19px] font-semibold', d === today && 'text-[#f6c58a]')}>{DAYS[d]}</span>
+              <span className={cx('text-[19px] font-semibold', d === focusDay && 'text-[#f6c58a]')}>{DAYS[d]}</span>
               {oneTime && <span className="text-[13px] tabular-nums text-white/45">{list[0].time}</span>}
             </div>
             <ul className="flex flex-col gap-3">
