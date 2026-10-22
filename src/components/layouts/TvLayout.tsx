@@ -319,6 +319,37 @@ function TvHome({
               <AppIcon id={a.id} />
             </button>
           ))}
+          {/* TV ayarları ikonunun yanında, onun yarı boyutunda üst üste iki ikon: çocukların haftalık programları */}
+          {(programKids.nutrition || programKids.lessons) && (
+            <span className="flex flex-col justify-between h-[62px]">
+              {programKids.nutrition && (
+                <button
+                  type="button"
+                  title={`${programKids.nutrition.name} · Beslenme programı`}
+                  aria-label={`${programKids.nutrition.name} beslenme programı`}
+                  className="tv-tile tv-mini w-[29px] h-[29px] rounded-[9px] grid place-items-center"
+                  style={{ background: 'linear-gradient(150deg, #fdba74, #ea580c)', overflow: 'visible', borderRadius: 9 }}
+                  onFocus={() => setFocus(null)}
+                  onClick={() => onProgram('nutrition', programKids.nutrition!.id)}
+                >
+                  <BowlFoodIcon weight="fill" className="w-[17px] h-[17px]" style={{ color: '#fff' }} />
+                </button>
+              )}
+              {programKids.lessons && (
+                <button
+                  type="button"
+                  title={`${programKids.lessons.name} · Ders programı`}
+                  aria-label={`${programKids.lessons.name} ders programı`}
+                  className="tv-tile tv-mini w-[29px] h-[29px] rounded-[9px] grid place-items-center"
+                  style={{ background: 'linear-gradient(150deg, #93c5fd, #2563eb)', overflow: 'visible', borderRadius: 9 }}
+                  onFocus={() => setFocus(null)}
+                  onClick={() => onProgram('lessons', programKids.lessons!.id)}
+                >
+                  <ChalkboardTeacherIcon weight="fill" className="w-[17px] h-[17px]" style={{ color: '#fff' }} />
+                </button>
+              )}
+            </span>
+          )}
         </div>
       )}
 
@@ -343,35 +374,6 @@ function TvHome({
               </button>
             )
           })}
-          {/* Ayarların yanında üst üste iki küçük ikon: çocukların haftalık programları */}
-          {(programKids.nutrition || programKids.lessons) && (
-            <span className="ml-1 flex flex-col gap-1">
-              {programKids.nutrition && (
-                <button
-                  type="button"
-                  title={`${programKids.nutrition.name} · Beslenme programı`}
-                  aria-label={`${programKids.nutrition.name} beslenme programı`}
-                  className="tv-glyph tv-mini h-[21px] w-[34px] rounded-full grid place-items-center text-white/55"
-                  onFocus={() => setFocus(null)}
-                  onClick={() => onProgram('nutrition', programKids.nutrition!.id)}
-                >
-                  <BowlFoodIcon weight="fill" className="w-[14px] h-[14px]" />
-                </button>
-              )}
-              {programKids.lessons && (
-                <button
-                  type="button"
-                  title={`${programKids.lessons.name} · Ders programı`}
-                  aria-label={`${programKids.lessons.name} ders programı`}
-                  className="tv-glyph tv-mini h-[21px] w-[34px] rounded-full grid place-items-center text-white/55"
-                  onFocus={() => setFocus(null)}
-                  onClick={() => onProgram('lessons', programKids.lessons!.id)}
-                >
-                  <ChalkboardTeacherIcon weight="fill" className="w-[14px] h-[14px]" />
-                </button>
-              )}
-            </span>
-          )}
         </nav>
         <div className="flex gap-5 text-[13px] font-semibold text-white/35 shrink-0">
           <span>
