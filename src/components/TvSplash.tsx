@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 
 const KEY = 'familyos:splash'
 const DURATION_MS = 3000
+/** Uyanışta TV'nin görüntüyü getirmesi (HDMI el sıkışması) birkaç sn sürüyor; animasyon ancak sonra başlar */
+const WAKE_DELAY_MS = 3500
 
 /**
  * TV açılışı: ~3 sn Besmele. Uygulama ilk açıldığında (WebView oturumu başına bir kez) ve TV
@@ -33,13 +35,18 @@ export function TvSplash() {
 
   useEffect(() => {
     if (!show) return
-    const t = setTimeout(() => setShow(false), DURATION_MS)
+    const t = setTimeout(() => setShow(false), DURATION_MS + (run ? WAKE_DELAY_MS : 0))
     return () => clearTimeout(t)
   }, [show, run])
 
   if (!show) return null
   return (
-    <div key={run} className="tv-splash fixed inset-0 z-[100] grid place-items-center bg-[#17110f] pointer-events-none" aria-hidden>
+    <div
+      key={run}
+      className="tv-splash fixed inset-0 z-[100] grid place-items-center bg-[#17110f] pointer-events-none"
+      style={{ '--splash-delay': `${run ? WAKE_DELAY_MS : 0}ms` } as CSSProperties}
+      aria-hidden
+    >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(246,197,138,0.16),transparent_60%)]" />
       <div className="relative flex flex-col items-center">
         <div
