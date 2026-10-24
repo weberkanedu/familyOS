@@ -3,7 +3,7 @@ import { useEffect, useState, type CSSProperties } from 'react'
 const KEY = 'familyos:splash'
 const DURATION_MS = 3000
 /** Uyanışta TV'nin görüntüyü getirmesi (HDMI el sıkışması) birkaç sn sürüyor; animasyon ancak sonra başlar */
-const WAKE_DELAY_MS = 3500
+const WAKE_DELAY_MS = 4500
 
 /**
  * TV açılışı: ~3 sn Besmele. Uygulama ilk açıldığında (WebView oturumu başına bir kez) ve TV
