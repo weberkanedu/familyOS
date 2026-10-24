@@ -4,8 +4,9 @@ const KEY = 'familyos:splash'
 const DURATION_MS = 3000
 
 /**
- * TV açılışı: ~3 sn Besmele. Yalnızca uygulama ilk açıldığında (WebView oturumu başına bir kez);
- * senkron/yenileme kaynaklı sayfa yeniden yüklemelerinde tekrar etmez.
+ * TV açılışı: ~3 sn Besmele. Uygulama ilk açıldığında (WebView oturumu başına bir kez) ve TV
+ * kumandayla kapatılıp açıldığında ("familyos:wake", MainActivity); senkron/güncelleme kaynaklı
+ * sayfa yeniden yüklemelerinde ve başka uygulamadan dönüşte tekrar etmez.
  * Animasyonlar kısa ve tek seferlik; html.tv'deki genel animasyon kapatmasını .tv-splash ile aşar.
  */
 export function TvSplash() {
@@ -19,15 +20,26 @@ export function TvSplash() {
     return true
   })
 
+  // Her uyanışta yeni anahtar → öğeler yeniden kurulur, CSS animasyonları baştan oynar
+  const [run, setRun] = useState(0)
+  useEffect(() => {
+    const wake = () => {
+      setRun((n) => n + 1)
+      setShow(true)
+    }
+    window.addEventListener('familyos:wake', wake)
+    return () => window.removeEventListener('familyos:wake', wake)
+  }, [])
+
   useEffect(() => {
     if (!show) return
     const t = setTimeout(() => setShow(false), DURATION_MS)
     return () => clearTimeout(t)
-  }, [show])
+  }, [show, run])
 
   if (!show) return null
   return (
-    <div className="tv-splash fixed inset-0 z-[100] grid place-items-center bg-[#17110f] pointer-events-none" aria-hidden>
+    <div key={run} className="tv-splash fixed inset-0 z-[100] grid place-items-center bg-[#17110f] pointer-events-none" aria-hidden>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(246,197,138,0.16),transparent_60%)]" />
       <div className="relative flex flex-col items-center">
         <div

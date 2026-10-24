@@ -2,7 +2,10 @@ package me.erkanicil.familyos.tv
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.Color
 import android.net.ConnectivityManager
 import android.net.Network
@@ -32,6 +35,20 @@ class MainActivity : Activity() {
     private var launchedPkg: String? = null
     private var launchedAt = 0L
 
+    // Kumandayla kapatma stick'i uyutur, uygulama arkada açık kalır: açılınca sayfaya
+    // "familyos:wake" gönderilir (açılış Besmelesi yeniden oynar). Ekran kapanmadıysa (ör. TiviMate'ten
+    // dönüş) gönderilmez.
+    private var screenWasOff = false
+    private var resumed = false
+    private val screenReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            when (intent.action) {
+                Intent.ACTION_SCREEN_OFF -> screenWasOff = true
+                Intent.ACTION_SCREEN_ON -> if (resumed) notifyWake()
+            }
+        }
+    }
+
     // JavaBridge thread'inden okunur; UI thread'de güncellenir.
     @Volatile private var currentHost: String? = null
 
@@ -59,6 +76,17 @@ class MainActivity : Activity() {
         createWebView()
         loadHome()
         getSystemService(ConnectivityManager::class.java).registerDefaultNetworkCallback(netCallback)
+        registerReceiver(screenReceiver, IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_OFF)
+            addAction(Intent.ACTION_SCREEN_ON)
+        })
+    }
+
+    private fun notifyWake() {
+        if (!screenWasOff) return
+        screenWasOff = false
+        Log.i(TAG, "wake: screen on")
+        dispatchToPage("familyos:wake")
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -196,9 +224,12 @@ class MainActivity : Activity() {
             launchedPkg = null
         }
         dispatchToPage("familyos:resume")
+        resumed = true
+        notifyWake()
     }
 
     override fun onPause() {
+        resumed = false
         // TiviMate/YouTube oynarken sayfa CPU harcamasın.
         webView.onPause()
         webView.pauseTimers()
@@ -212,6 +243,7 @@ class MainActivity : Activity() {
 
     override fun onDestroy() {
         runCatching { getSystemService(ConnectivityManager::class.java).unregisterNetworkCallback(netCallback) }
+        runCatching { unregisterReceiver(screenReceiver) }
         webView.destroy()
         super.onDestroy()
     }
