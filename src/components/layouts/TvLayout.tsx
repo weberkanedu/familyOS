@@ -19,6 +19,7 @@ import { cx } from '../ui'
 import { WeatherIcon } from '../WeatherIcon'
 import { IdleScreen, MessageFlash } from '../IdleScreen'
 import { TvProgramPopup, type TvProgramKind } from '../TvProgramPopup'
+import { TvSplash } from '../TvSplash'
 import { useClock, useIdle } from '../../lib/hooks'
 import { dateKey, fmtDayName, fmtMonth, fmtTime, pad, todayKey, relativeTime } from '../../lib/time'
 import { greetingFor } from '../../lib/specialDays'
@@ -164,8 +165,10 @@ export function TvLayout({
           rotateMs={10_000}
           revealMs={5_000}
           hint="Devam etmek için kumandada bir tuşa basın"
+          minimal
         />
       )}
+      <TvSplash />
     </div>
   )
 }
@@ -263,14 +266,19 @@ function TvHome({
   const apps = useMemo(tvApps, [])
   const firstRef = useRef<HTMLButtonElement>(null)
 
-  // Açılışta ve Home tuşunda odak ilk kutuda (kumanda hemen çalışsın)
+  // Açılışta, Home ve Geri tuşunda odak ilk kutuda (TiviMate vb.; kumanda hemen çalışsın).
+  // Açık pencere varken Geri yalnızca onu kapatır, odak açan düğmeye döner.
   useEffect(() => {
     const f = () => {
       if (!document.querySelector('[role="dialog"]')) firstRef.current?.focus({ preventScroll: true })
     }
     f()
     window.addEventListener('familyos:home', f)
-    return () => window.removeEventListener('familyos:home', f)
+    window.addEventListener('familyos:back', f)
+    return () => {
+      window.removeEventListener('familyos:home', f)
+      window.removeEventListener('familyos:back', f)
+    }
   }, [])
 
   const s = useSummary(db, now)
@@ -527,6 +535,39 @@ function genitive(name: string): string {
  *  ("Kırpık Börek, Peynir") olduğu gibi bırak — yoksa "kırpık Börek" gibi tutarsız olur */
 const lowerFirst = (t: string) => (/\s\p{Lu}/u.test(t) ? t : t.charAt(0).toLocaleLowerCase('tr') + t.slice(1))
 
+/**
+ * Bulunma eki: "İngilizce Kursu" → "İngilizce Kursunda", "Basketbol Antrenmanı" → "Antrenmanında",
+ * "Okul" → "Okulda", "Diş" → "Dişte". Çok kelimeli ve ı/i/u/ü ile biten ad tamlama sayılır (+nda).
+ */
+function locative(title: string): string {
+  const lower = title.toLocaleLowerCase('tr')
+  const end = lower.slice(-1)
+  const lastV = [...lower].reverse().find((c) => 'aıoueiöü'.includes(c)) ?? 'e'
+  const a = 'aıou'.includes(lastV) ? 'a' : 'e'
+  if (/\s/.test(title.trim()) && 'ıiuü'.includes(end)) return `${title}nd${a}`
+  if ('aıoueiöü'.includes(end)) return `${title}d${a}`
+  return `${title}${'çfhkpsşt'.includes(end) ? 't' : 'd'}${a}`
+}
+
+/** Yönelme ekiyle saat: 13:10 → "13:10’a", 12:20 → "12:20’ye", 17:00 → "17:00’ye" */
+function untilTime(d: Date): string {
+  const hh = d.getHours()
+  const mm = d.getMinutes()
+  const n = mm || hh
+  const UNIT = ['a', 'e', 'ye', 'e', 'e', 'e', 'ya', 'ye', 'e', 'a'] // sıfır bir iki üç dört beş altı yedi sekiz dokuz
+  const TENS: Record<number, string> = { 0: 'a', 10: 'a', 20: 'ye', 30: 'a', 40: 'a', 50: 'ye' } // on yirmi otuz kırk elli
+  const suffix = n % 10 ? UNIT[n % 10] : TENS[n] ?? 'a'
+  return `${pad(hh)}:${pad(mm)}’${suffix}`
+}
+
+/** Süren etkinlik: "Ensar İngilizce Kursunda, 13:10’a kadar." */
+function ongoingSentence(e: DB['events'][number], s: Summary): Seg[] {
+  const names = e.memberIds.map((id) => s.member.get(id)?.name).filter(Boolean) as string[]
+  const who = names.length > 2 ? `${names.slice(0, -1).join(', ')} ve ${names[names.length - 1]}` : names.join(' ve ')
+  const where = locative(lowerFirst(e.title))
+  return [{ t: who ? `${who} ` : 'Şu an ' }, { t: where, hl: true }, { t: `, ${untilTime(new Date(e.end!))} kadar.` }]
+}
+
 function durationText(min: number): string {
   if (min < 60) return `${min} dakika`
   const h = Math.floor(min / 60)
@@ -589,7 +630,10 @@ function daySentences(s: Summary, now: Date, lat: number, lon: number): Seg[][] 
     return out.slice(0, 3)
   }
 
-  const next = s.upcoming.find((e) => !e.allDay)
+  // Bitişi belli ve şu an süren etkinlik: "Ensar İngilizce Kursunda"; sıradaki = henüz başlamamış ilk etkinlik
+  const ongoing = s.ongoing[0]
+  if (ongoing) out.push(ongoingSentence(ongoing, s))
+  const next = s.events.find((e) => !e.allDay && new Date(e.start).getTime() > s.now)
   if (next) out.push(eventSentence('Sıradaki: ', next, s))
 
   const dinner = s.meals.find((m) => m.key === 'dinner')?.title
@@ -708,12 +752,21 @@ function DayHero({ s, now, weather, lat, lon }: { s: Summary; now: Date; weather
 function SectionHero({ k, s, db, status }: { k: SectionKey; s: Summary; db: DB; status: SyncStatus }) {
   switch (k) {
     case 'calendar': {
-      const next = s.upcoming[0]
+      const now = s.ongoing[0]
+      const next = s.upcoming.find((e) => e.allDay || new Date(e.start).getTime() > s.now)
       return (
         <Hero
           eyebrow="Takvim · Bugün"
           title={s.events.length ? `${s.events.length} etkinlik` : 'Bugün boş'}
-          sub={next ? `Sıradaki ${next.allDay ? 'tüm gün' : fmtTime(new Date(next.start))} · ${next.title}` : s.tomorrow.length ? `Yarın ${s.tomorrow.length} etkinlik var` : undefined}
+          sub={
+            now
+              ? `Şu an · ${now.title} · ${untilTime(new Date(now.end!))} kadar`
+              : next
+                ? `Sıradaki ${next.allDay ? 'tüm gün' : fmtTime(new Date(next.start))} · ${next.title}`
+                : s.tomorrow.length
+                  ? `Yarın ${s.tomorrow.length} etkinlik var`
+                  : undefined
+          }
           panel={
             s.events.length ? (
               <ul className="space-y-2.5">
@@ -742,7 +795,7 @@ function SectionHero({ k, s, db, status }: { k: SectionKey; s: Summary; db: DB; 
                         <li key={e.id} className="flex items-center gap-4 text-[16px] text-white/70">
                           <span className="w-14 shrink-0 font-bold tabular-nums">{e.allDay ? 'Gün' : fmtTime(new Date(e.start))}</span>
                           <span className="flex-1 min-w-0 truncate font-semibold">{e.title}</span>
-                          <span className="shrink-0">{s.emojis(e.memberIds)}</span>
+                          <Avatars ids={e.memberIds} member={s.member} />
                         </li>
                       ))}
                     </ul>
@@ -967,7 +1020,6 @@ function useSummary(db: DB, now: Date) {
     const t = now.getTime()
     const tomorrowKey = dateKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1))
     const member = new Map(db.members.map((m) => [m.id, m]))
-    const emojis = (ids: (string | undefined)[]) => ids.map((id) => (id ? member.get(id)?.emoji : '')).join('')
     const dayOf = (e: DB['events'][number]) => (e.allDay ? e.start.slice(0, 10) : dateKey(new Date(e.start)))
     const byStart = (a: DB['events'][number], b: DB['events'][number]) =>
       a.allDay === b.allDay ? a.start.localeCompare(b.start) : a.allDay ? -1 : 1
@@ -976,9 +1028,9 @@ function useSummary(db: DB, now: Date) {
     return {
       now: t,
       member,
-      emojis,
       events,
       upcoming: events.filter((e) => e.allDay || new Date(e.end ?? e.start).getTime() >= t - 15 * 60_000),
+      ongoing: events.filter((e) => !e.allDay && e.end && new Date(e.start).getTime() <= t && t < new Date(e.end).getTime()),
       tomorrow: db.events.filter((e) => dayOf(e) === tomorrowKey).sort(byStart),
       dueCount: due.length,
       choresLeft: due.filter((c) => !isChoreDoneToday(c, today)),

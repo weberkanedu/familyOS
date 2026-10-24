@@ -29,6 +29,7 @@ export function IdleScreen({
   rotateMs = ROTATE_MS,
   revealMs = REVEAL_MS,
   hint = 'Uyandırmak için dokunun',
+  minimal = false,
 }: {
   db: DB
   weather: WeatherData | null
@@ -39,6 +40,8 @@ export function IdleScreen({
   /** Anlam kaçıncı ms'de belirir (TV: 5 sn) */
   revealMs?: number
   hint?: string
+  /** TV: yalnızca saat + tarih ve ekranda yavaşça yüzen büyük kelime kartı (hava, program, mesaj yok) */
+  minimal?: boolean
 }) {
   const now = useClock(1000)
   const [index, setIndex] = useState(0)
@@ -91,6 +94,47 @@ export function IdleScreen({
   const recent = db.messages.slice(-2).reverse()
   const memberOf = (id?: string) => db.members.find((m) => m.id === id)
   const todayW = weather?.days?.[0]
+
+  if (minimal) {
+    return (
+      <div
+        className="fixed inset-0 z-[60] bg-ink-950 text-white cursor-pointer select-none overflow-hidden"
+        onClick={onWake}
+        role="button"
+        aria-label="Ekranı uyandır"
+        data-keep-light
+      >
+        {photo && <img src={photo} alt="" className="absolute inset-0 w-full h-full object-cover" style={{ opacity: night ? 0.3 : 0.6 }} />}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-black/70" />
+
+        <div className="absolute top-8 left-10 leading-none">
+          <div className="text-[150px] font-extrabold tabular-nums tracking-tight">
+            {pad(now.getHours())}:{pad(now.getMinutes())}
+          </div>
+          <div className="text-2xl font-bold text-white/85 mt-2">
+            {fmtDayName(now)}, {fmtDate(now)} · {greetingFor(now)}
+          </div>
+        </div>
+
+        {/* Kelime: alt bölgede iki ayrı sürede (yatay/dikey) gidip gelir → düzensiz, yavaş süzülme */}
+        <div className="absolute left-0 right-0 top-[250px] bottom-10 grid place-items-center">
+          <div className="idle-float-x">
+            <div className="idle-float-y w-[680px] rounded-[36px] bg-black/45 px-10 py-8 text-center">
+              <div className="text-[15px] font-extrabold uppercase tracking-[0.25em] text-white/50">
+                {deck} · {revealed ? 'Anlamı' : 'Kelime'}
+              </div>
+              <div className="mt-3 text-[84px] leading-[1.05] font-extrabold tracking-tight break-words">{card.term}</div>
+              <div className={cx('mt-4 min-h-[48px] text-[38px] font-semibold leading-tight line-clamp-2', revealed ? 'text-amber-200' : 'text-white/30')}>
+                {revealed ? card.meaning : '· · ·'}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="absolute bottom-2 left-0 right-0 text-center text-[13px] text-white/40">{hint}</div>
+      </div>
+    )
+  }
 
   return (
     <div
