@@ -76,6 +76,34 @@ export function setupTV() {
   html.classList.add('tv')
   document.querySelector('meta[name="viewport"]')?.setAttribute('content', 'width=1280')
   window.addEventListener('keydown', onKey)
+  if (import.meta.env.PROD) watchForUpdates()
+}
+
+/**
+ * Yeni dağıtımı kendiliğinden al: TV sayfası günlerce açık kalır, yeniden yüklenmezse eski
+ * derleme çalışmaya devam ederdi. 10 dk'da bir (ve başka uygulamadan dönünce) index.html'deki
+ * ana betik adına bakılır; değiştiyse ve son 1 dk tuşa basılmadıysa sayfa yenilenir.
+ */
+function watchForUpdates() {
+  const current = document.querySelector<HTMLScriptElement>('script[src*="/assets/index-"]')?.src
+  if (!current) return
+  let lastKey = Date.now()
+  let pending = false
+  window.addEventListener('keydown', () => (lastKey = Date.now()), true)
+  const check = async () => {
+    if (!pending) {
+      try {
+        const html = await (await fetch(`/index.html?v=${Date.now()}`, { cache: 'no-store' })).text()
+        const m = /src="([^"]*\/assets\/index-[^"]+\.js)"/.exec(html)
+        pending = !!m && new URL(m[1], location.href).href !== current
+      } catch {
+        return // çevrimdışı: sonra yine bakılır
+      }
+    }
+    if (pending && Date.now() - lastKey > 60_000) location.reload()
+  }
+  setInterval(check, 10 * 60_000)
+  window.addEventListener('familyos:resume', () => void check())
 }
 
 /**

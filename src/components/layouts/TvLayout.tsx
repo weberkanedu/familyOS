@@ -127,7 +127,6 @@ export function TvLayout({
             </button>
           )}
           {showStatus ? <StatusPill now={now} weather={weather} city={city} status={status} /> : <SpiritualLines />}
-          {section && <div className="text-[26px] font-display tracking-wide ml-2 truncate">{section.label}</div>}
         </div>
         <PrayerTimes now={now} lat={db.settings.lat ?? HOME.lat} lon={db.settings.lon ?? HOME.lon} />
       </header>
@@ -715,14 +714,16 @@ function DayHero({ s, now, weather, lat, lon }: { s: Summary; now: Date; weather
       <div className="shrink-0 w-[300px] flex flex-col items-end text-right">
         {/* Uygulamalar/özet görünürken saat ve tarih burada büyük durur (sol üstteki hap gizli) */}
         {/* Saat: ince ağırlık + büyük optik boyut; iki nokta soluk ve hafif yukarıda */}
-        <div className="tv-clock text-[112px] leading-[0.9] tabular-nums">
+        {/* Tarih saatin üstünde (saatin yarısı), gün adı altında (tarihin yarısı) */}
+        <div className="text-[56px] leading-none font-light text-white/90">
+          {now.getDate()} {fmtMonth(now)}
+        </div>
+        <div className="tv-clock mt-2 text-[112px] leading-[0.9] tabular-nums">
           {pad(now.getHours())}
           <span className="tv-clock-colon">:</span>
           {pad(now.getMinutes())}
         </div>
-        <div className="mt-2 text-[20px] text-white/70">
-          {fmtDayName(now)}, {now.getDate()} {fmtMonth(now)}
-        </div>
+        <div className="mt-3 text-[28px] leading-none text-white/70">{fmtDayName(now)}</div>
       {weather && (
         <div className="mt-8 flex flex-col items-end">
           <div className="flex items-center gap-3">
